@@ -5,7 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
+import bcrypt from "bcryptjs";
 
 function generateSlug(name: string): string {
   return name
@@ -20,7 +20,6 @@ export async function POST(req: Request) {
   try {
     const { organizationName, name, email, password } = await req.json();
 
-    // Validações
     if (!organizationName || !name || !email || !password) {
       return NextResponse.json(
         { error: "Todos os campos são obrigatórios" },
@@ -35,7 +34,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verifica se email já existe
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -47,7 +45,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Gera slug único para organização
     let slug = generateSlug(organizationName);
     let slugExists = await prisma.organization.findUnique({
       where: { slug },
@@ -62,10 +59,8 @@ export async function POST(req: Request) {
       counter++;
     }
 
-    // Hash da senha
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    // Cria organização e usuário em transação
     const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
         data: {

@@ -15,13 +15,17 @@ import {
   ClipboardList,
   Settings,
   BookOpen,
+  Users,
+  BarChart3,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/chats", icon: MessageSquare, label: "Chats" },
-  { href: "/kanban", icon: ClipboardList, label: "Tarefas" },
+  { href: "/kanban", icon: ClipboardList, label: "Kanban" },
   { href: "/knowledge", icon: BookOpen, label: "Conhecimento" },
+  { href: "/users", icon: Users, label: "Usuários" },
+  { href: "/reports", icon: BarChart3, label: "Relatórios" },
   { href: "/settings", icon: Settings, label: "Configurações" },
 ];
 
