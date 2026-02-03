@@ -1,0 +1,269 @@
+/**
+ * Autor: Sandro Servo
+ * Site: https://cloudservo.com.br
+ * 
+ * Serviço de Memória de Leads da Vi
+ * Armazena preferências, interesses, objeções e contexto das conversas
+ */
+
+import { prisma } from "@/lib/prisma";
+
+export interface LeadMemoryItem {
+  id: string;
+  leadId: string;
+  type: string;
+  key: string;
+  value: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Tipos de memória
+export const MEMORY_TYPES = {
+  PREFERENCE: "preference",     // Preferências do lead (pagamento, plano, etc)
+  INTEREST: "interest",         // Interesses demonstrados
+  OBJECTION: "objection",       // Objeções levantadas
+  CONTEXT: "context",           // Contexto da conversa
+  SUMMARY: "summary",           // Resumo da conversa
+  PERSONAL: "personal",         // Dados pessoais coletados
+} as const;
+
+// Chaves de memória comuns
+export const MEMORY_KEYS = {
+  PLANO_INTERESSE: "plano_interesse",
+  PLANO_RECOMENDADO: "plano_recomendado",
+  OBJECAO_PRECO: "objecao_preco",
+  OBJECAO_CARENCIA: "objecao_carencia",
+  PREFERENCIA_PAGAMENTO: "preferencia_pagamento",
+  TEM_DEPENDENTES: "tem_dependentes",
+  QTD_DEPENDENTES: "qtd_dependentes",
+  TEM_IDOSO_60: "tem_idoso_60",
+  FOCO_ATENDIMENTO: "foco_atendimento",
+  ULTIMO_RESUMO: "ultimo_resumo",
+  PROXIMO_PASSO: "proximo_passo",
+  NOME_INFORMADO: "nome_informado",
+} as const;
+
+/**
+ * Salva ou atualiza uma memória do lead
+ */
+export async function saveMemory(
+  leadId: string,
+  type: string,
+  key: string,
+  value: string
+): Promise<LeadMemoryItem> {
+  return prisma.leadMemory.upsert({
+    where: {
+      leadId_key: { leadId, key },
+    },
+    update: { value, type },
+    create: { leadId, type, key, value },
+  });
+}
+
+/**
+ * Busca uma memória específica do lead
+ */
+export async function getMemory(
+  leadId: string,
+  key: string
+): Promise<string | null> {
+  const memory = await prisma.leadMemory.findUnique({
+    where: {
+      leadId_key: { leadId, key },
+    },
+  });
+  return memory?.value ?? null;
+}
+
+/**
+ * Busca todas as memórias de um lead
+ */
+export async function getAllMemories(
+  leadId: string,
+  type?: string
+): Promise<LeadMemoryItem[]> {
+  return prisma.leadMemory.findMany({
+    where: {
+      leadId,
+      ...(type && { type }),
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
+/**
+ * Remove uma memória específica
+ */
+export async function deleteMemory(leadId: string, key: string): Promise<void> {
+  await prisma.leadMemory.delete({
+    where: {
+      leadId_key: { leadId, key },
+    },
+  }).catch(() => {});
+}
+
+/**
+ * Remove todas as memórias de um lead
+ */
+export async function clearAllMemories(leadId: string): Promise<void> {
+  await prisma.leadMemory.deleteMany({
+    where: { leadId },
+  });
+}
+
+/**
+ * Formata memórias para contexto da IA
+ */
+export function formatMemoriesForAI(memories: LeadMemoryItem[]): string {
+  if (memories.length === 0) {
+    return "";
+  }
+
+  const grouped = memories.reduce(
+    (acc, item) => {
+      if (!acc[item.type]) {
+        acc[item.type] = [];
+      }
+      acc[item.type].push(item);
+      return acc;
+    },
+    {} as Record<string, LeadMemoryItem[]>
+  );
+
+  let result = "<LeadMemory>\n";
+
+  const typeLabels: Record<string, string> = {
+    preference: "Preferências",
+    interest: "Interesses",
+    objection: "Objeções",
+    context: "Contexto",
+    summary: "Resumo",
+    personal: "Dados Pessoais",
+  };
+
+  for (const [type, items] of Object.entries(grouped)) {
+    const label = typeLabels[type] || type;
+    result += `\n## ${label}\n`;
+    for (const item of items) {
+      result += `- ${item.key}: ${item.value}\n`;
+    }
+  }
+
+  result += "\n</LeadMemory>";
+
+  return result;
+}
+
+/**
+ * Detecta se a mensagem contém um nome informado pelo cliente
+ * Retorna o nome se detectado, null caso contrário
+ */
+export function extractNameFromMessage(message: string, previousBotAskedName: boolean): string | null {
+  if (!previousBotAskedName) return null;
+  
+  const trimmed = message.trim();
+  
+  // Se a mensagem é curta (1-3 palavras) e não contém números, provavelmente é um nome
+  const words = trimmed.split(/\s+/);
+  if (words.length <= 3 && words.length >= 1) {
+    // Verifica se não contém números ou caracteres especiais demais
+    const hasNumbers = /\d/.test(trimmed);
+    const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(trimmed);
+    
+    if (!hasNumbers && !hasSpecialChars) {
+      // Padrões comuns de resposta de nome
+      const namePatterns = [
+        /^(?:me\s*)?(?:chama?|chamar?)?\s*(?:de\s+)?(.+)$/i,
+        /^(?:meu\s+nome\s+(?:é|e)\s+)?(.+)$/i,
+        /^(?:pode\s+(?:me\s+)?chamar\s+(?:de\s+)?)?(.+)$/i,
+        /^(?:sou\s+(?:o|a)\s+)?(.+)$/i,
+        /^(.+)$/i, // fallback: pega tudo se for curto
+      ];
+      
+      for (const pattern of namePatterns) {
+        const match = trimmed.match(pattern);
+        if (match && match[1]) {
+          const name = match[1].trim();
+          // Capitaliza primeira letra de cada palavra
+          return name.split(' ')
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(' ');
+        }
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Extrai e salva memórias automaticamente da conversa
+ * Retorna o nome extraído se detectado
+ */
+export async function extractAndSaveMemories(
+  leadId: string,
+  message: string,
+  isFromLead: boolean,
+  previousBotAskedName: boolean = false
+): Promise<{ extractedName?: string }> {
+  if (!isFromLead) return {};
+
+  const lowerMessage = message.toLowerCase();
+  let extractedName: string | undefined;
+  
+  // Detecta nome informado
+  const name = extractNameFromMessage(message, previousBotAskedName);
+  if (name) {
+    await saveMemory(leadId, MEMORY_TYPES.PERSONAL, MEMORY_KEYS.NOME_INFORMADO, name);
+    extractedName = name;
+  }
+
+  // Detecta interesse em planos
+  if (
+    lowerMessage.includes("plano") ||
+    lowerMessage.includes("essencial") ||
+    lowerMessage.includes("completo") ||
+    lowerMessage.includes("premium")
+  ) {
+    if (lowerMessage.includes("essencial")) {
+      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Essencial");
+    } else if (lowerMessage.includes("completo")) {
+      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Completo");
+    } else if (lowerMessage.includes("premium")) {
+      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Premium");
+    }
+  }
+
+  // Detecta dependentes
+  if (lowerMessage.includes("dependente") || lowerMessage.includes("família") || lowerMessage.includes("filhos")) {
+    await saveMemory(leadId, MEMORY_TYPES.CONTEXT, MEMORY_KEYS.TEM_DEPENDENTES, "sim");
+  }
+
+  // Detecta idoso 60+
+  if (lowerMessage.includes("60") || lowerMessage.includes("idoso") || lowerMessage.includes("terceira idade")) {
+    await saveMemory(leadId, MEMORY_TYPES.CONTEXT, MEMORY_KEYS.TEM_IDOSO_60, "sim");
+  }
+
+  // Detecta objeção de preço
+  if (lowerMessage.includes("caro") || lowerMessage.includes("preço") || lowerMessage.includes("desconto")) {
+    await saveMemory(leadId, MEMORY_TYPES.OBJECTION, MEMORY_KEYS.OBJECAO_PRECO, "Lead mencionou preço/desconto");
+  }
+
+  // Detecta preferência de pagamento
+  if (lowerMessage.includes("pix")) {
+    await saveMemory(leadId, MEMORY_TYPES.PREFERENCE, MEMORY_KEYS.PREFERENCIA_PAGAMENTO, "Pix");
+  } else if (lowerMessage.includes("cartão") || lowerMessage.includes("credito")) {
+    await saveMemory(leadId, MEMORY_TYPES.PREFERENCE, MEMORY_KEYS.PREFERENCIA_PAGAMENTO, "Cartão de crédito");
+  }
+
+  // Detecta foco de atendimento
+  if (lowerMessage.includes("rotina") || lowerMessage.includes("prevenção")) {
+    await saveMemory(leadId, MEMORY_TYPES.CONTEXT, MEMORY_KEYS.FOCO_ATENDIMENTO, "Rotina e prevenção");
+  } else if (lowerMessage.includes("exame") || lowerMessage.includes("check-up")) {
+    await saveMemory(leadId, MEMORY_TYPES.CONTEXT, MEMORY_KEYS.FOCO_ATENDIMENTO, "Exames e check-ups");
+  }
+
+  return { extractedName };
+}
