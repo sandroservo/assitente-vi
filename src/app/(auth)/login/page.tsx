@@ -58,13 +58,13 @@ export default function LoginPage() {
           <div className="mb-8">
             <Image
               src="/assets/logo.webp"
-              alt="Secretária Vi"
+              alt="Assistente Vi"
               width={180}
               height={180}
               className="mx-auto"
             />
           </div>
-          <h1 className="text-4xl font-bold mb-4">Secretária Vi</h1>
+          <h1 className="text-4xl font-bold mb-4">Assistente Vi</h1>
           <p className="text-xl text-white/80">
             Sua assistente virtual inteligente para gestão de leads e atendimento
           </p>
@@ -78,7 +78,7 @@ export default function LoginPage() {
           <div className="lg:hidden mb-8 text-center">
             <Image
               src="/assets/logo.webp"
-              alt="Secretária Vi"
+              alt="Assistente Vi"
               width={100}
               height={100}
               className="mx-auto"
