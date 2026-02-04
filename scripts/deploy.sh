@@ -124,8 +124,8 @@ if [ ! -f "/etc/systemd/system/\$SERVICE_NAME.service" ] && [ -f "\$APP_DIR/scri
   sudo systemctl enable "\$SERVICE_NAME"
 fi
 
-echo "📦 Instalando dependências..."
-npm ci --omit=dev || npm install --omit=dev
+echo "📦 Instalando dependências (incl. dev para build)..."
+npm ci || npm install
 
 echo "🔨 Build..."
 npm run build
