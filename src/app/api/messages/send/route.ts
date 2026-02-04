@@ -11,6 +11,8 @@ export async function POST(req: Request) {
   try {
     const { conversationId, text } = await req.json();
 
+    console.log("[Send Message] Request:", { conversationId, textLength: text?.length });
+
     if (!conversationId || !text) {
       return NextResponse.json(
         { ok: false, error: "missing fields" },
@@ -24,18 +26,23 @@ export async function POST(req: Request) {
     });
 
     if (!convo) {
+      console.error("[Send Message] Conversation not found:", conversationId);
       return NextResponse.json(
         { ok: false, error: "conversation not found" },
         { status: 404 }
       );
     }
 
+    console.log("[Send Message] Sending to:", convo.lead.phone);
+
     try {
       await evolutionSendText({ number: convo.lead.phone, text });
+      console.log("[Send Message] Message sent successfully");
     } catch (evolutionError) {
-      console.error("Evolution API error:", evolutionError);
+      console.error("[Send Message] Evolution API error:", evolutionError);
+      const errorMessage = evolutionError instanceof Error ? evolutionError.message : "Erro desconhecido";
       return NextResponse.json(
-        { ok: false, error: "Erro ao enviar mensagem via WhatsApp" },
+        { ok: false, error: `Erro ao enviar mensagem: ${errorMessage}` },
         { status: 500 }
       );
     }
