@@ -13,7 +13,7 @@ export default async function KnowledgePage() {
     orderBy: [{ category: "asc" }, { priority: "desc" }, { title: "asc" }],
   });
 
-  const categories = [...new Set(knowledgeItems.map((item) => item.category))];
+  const categories = [...new Set(knowledgeItems.map((item: typeof knowledgeItems[number]) => item.category))];
 
   return (
     <div className="p-6 space-y-6 h-full overflow-auto">

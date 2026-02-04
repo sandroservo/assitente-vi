@@ -17,7 +17,7 @@ export default async function KanbanPage() {
     },
   });
 
-  const leads = leadsData.map((lead) => ({
+  const leads = leadsData.map((lead: typeof leadsData[number]) => ({
     id: lead.id,
     name: lead.name,
     pushName: lead.pushName,

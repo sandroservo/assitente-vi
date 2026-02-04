@@ -24,7 +24,7 @@ export async function GET() {
       take: 200,
     });
 
-    const leads = leadsData.map((lead) => ({
+    const leads = leadsData.map((lead: typeof leadsData[number]) => ({
       id: lead.id,
       name: lead.name,
       pushName: (lead as { pushName?: string | null }).pushName ?? null,

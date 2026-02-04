@@ -75,7 +75,7 @@ export default async function ReportsPage() {
   });
 
   // Calcula estatísticas por usuário
-  const userStats = users.map((user) => {
+  const userStats = users.map((user: typeof users[number]) => {
     const userHandoffs = handoffs.filter((h) => h.assignedToId === user.id);
     const completed = userHandoffs.filter((h) => h.status === "closed").length;
     

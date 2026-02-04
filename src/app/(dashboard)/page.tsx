@@ -56,7 +56,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {stats.slice(0, 3).map((stat) => (
+        {stats.slice(0, 3).map((stat: typeof stats[number]) => (
           <div key={stat.title} className="bg-white rounded-xl p-5 border border-gray-100">
             <div className="flex items-center gap-4">
               <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient}`}>
