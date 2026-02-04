@@ -3,6 +3,8 @@
  * Site: https://cloudservo.com.br
  */
 
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import { LeadsKanban } from "@/app/(dashboard)/leads/ui/LeadsKanban";
 
