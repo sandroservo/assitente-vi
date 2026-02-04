@@ -38,7 +38,8 @@ export type KnowledgeCategory = (typeof KNOWLEDGE_CATEGORIES)[number];
 export async function searchKnowledge(
   query: string,
   category?: string,
-  limit: number = 5
+  limit: number = 5,
+  organizationId?: string
 ): Promise<KnowledgeItem[]> {
   const words = query
     .toLowerCase()
@@ -46,13 +47,14 @@ export async function searchKnowledge(
     .filter((w) => w.length > 2);
 
   if (words.length === 0) {
-    return getAllKnowledge(category, limit);
+    return getAllKnowledge(category, limit, organizationId);
   }
 
-  // Busca por palavras-chave no título, conteúdo e keywords
+  // Busca por palavras-chave no título, conteúdo e keywords (da organização)
   const knowledge = await prisma.knowledge.findMany({
     where: {
       active: true,
+      ...(organizationId && { organizationId }),
       ...(category && { category }),
       OR: words.flatMap((word) => [
         { title: { contains: word, mode: "insensitive" } },
@@ -68,15 +70,17 @@ export async function searchKnowledge(
 }
 
 /**
- * Busca todos os conhecimentos de uma categoria
+ * Busca todos os conhecimentos de uma categoria (opcionalmente da organização)
  */
 export async function getAllKnowledge(
   category?: string,
-  limit: number = 20
+  limit: number = 20,
+  organizationId?: string
 ): Promise<KnowledgeItem[]> {
   return prisma.knowledge.findMany({
     where: {
       active: true,
+      ...(organizationId && { organizationId }),
       ...(category && { category }),
     },
     orderBy: [{ priority: "desc" }, { category: "asc" }, { title: "asc" }],

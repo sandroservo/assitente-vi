@@ -7,9 +7,9 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { MessageSquare, Phone } from "lucide-react";
+import { MessageSquare, Phone, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DragDropContext,
@@ -31,6 +31,7 @@ interface Lead {
 
 interface LeadsKanbanProps {
   initialLeads: Lead[];
+  initialHasMore?: boolean;
 }
 
 const COLUMNS = [
@@ -94,25 +95,67 @@ const COLUMNS = [
 
 const POLLING_INTERVAL = 5000;
 
-export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+const PAGE_SIZE = 20;
 
-  const fetchLeads = useCallback(async () => {
+export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanbanProps) {
+  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const fetchLeads = useCallback(async (replace = true) => {
     try {
-      const res = await fetch("/api/leads");
+      const skip = replace ? 0 : leads.length;
+      const take = replace ? Math.max(leads.length, PAGE_SIZE) : PAGE_SIZE;
+      const res = await fetch(`/api/leads?skip=${skip}&take=${take}`);
       if (res.ok) {
         const data = await res.json();
-        setLeads(data.leads);
+        if (replace) {
+          setLeads(data.leads);
+        } else {
+          setLeads((prev) => [...prev, ...data.leads]);
+        }
+        setHasMore(data.hasMore ?? false);
       }
     } catch (error) {
       console.error("Erro ao buscar leads:", error);
     }
-  }, []);
+  }, [leads.length]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/leads?skip=${leads.length}&take=${PAGE_SIZE}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLeads((prev) => [...prev, ...data.leads]);
+        setHasMore(data.hasMore ?? false);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar mais leads:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [leads.length, hasMore, loadingMore]);
 
   useEffect(() => {
-    const interval = setInterval(fetchLeads, POLLING_INTERVAL);
+    const interval = setInterval(() => fetchLeads(true), POLLING_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchLeads]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { rootMargin: "200px", threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const getLeadsByStatus = (status: string) => {
     return leads.filter((lead) => lead.status === status);
@@ -326,6 +369,15 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
             </div>
           );
         })}
+      </div>
+      {/* Sentinel para scroll infinito */}
+      <div ref={sentinelRef} className="h-4 flex justify-center py-6">
+        {loadingMore && (
+          <Loader2 className="w-6 h-6 animate-spin text-pink-500" />
+        )}
+        {!hasMore && leads.length > 0 && (
+          <p className="text-sm text-gray-400">Todos os leads carregados</p>
+        )}
       </div>
     </DragDropContext>
   );

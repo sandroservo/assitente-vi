@@ -9,6 +9,8 @@ import { Heart } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+const INITIAL_TAKE = 20;
+
 export default async function LeadsPage() {
   const leadsData = await prisma.lead.findMany({
     orderBy: { createdAt: "desc" },
@@ -19,10 +21,13 @@ export default async function LeadsPage() {
         select: { id: true },
       },
     },
-    take: 200,
+    take: INITIAL_TAKE + 1,
   });
 
-  const leads = leadsData.map((lead: typeof leadsData[number]) => ({
+  const hasMore = leadsData.length > INITIAL_TAKE;
+  const leadsDataPage = leadsData.slice(0, INITIAL_TAKE);
+
+  const leads = leadsDataPage.map((lead: typeof leadsDataPage[number]) => ({
     id: lead.id,
     name: lead.name,
     pushName: (lead as { pushName?: string | null }).pushName ?? null,
@@ -50,8 +55,8 @@ export default async function LeadsPage() {
         </div>
       </div>
 
-      {/* Kanban */}
-      <LeadsKanban initialLeads={leads} />
+      {/* Kanban com scroll infinito */}
+      <LeadsKanban initialLeads={leads} initialHasMore={hasMore} />
     </div>
   );
 }

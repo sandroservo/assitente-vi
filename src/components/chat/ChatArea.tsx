@@ -23,6 +23,7 @@ import {
   Loader2,
   Wifi,
   WifiOff,
+  MessageCircleOff,
 } from "lucide-react";
 
 interface Message {
@@ -58,6 +59,7 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [handoffLoading, setHandoffLoading] = useState(false);
+  const [parouResponderLoading, setParouResponderLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [lead, setLead] = useState(initialLead);
   const [isConnected, setIsConnected] = useState(true);
@@ -105,7 +107,10 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
           const existingIds = new Set(prev.map((m) => m.id));
           const newMsgs = data.messages.filter((m: Message) => !existingIds.has(m.id));
           if (newMsgs.length > 0) {
-            return [...prev, ...newMsgs];
+            return [...prev, ...newMsgs].sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
           }
           return prev;
         });
@@ -204,6 +209,32 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
     }
   }
 
+  async function handleClienteParouResponder() {
+    setParouResponderLoading(true);
+    try {
+      const res = await fetch("/api/followups/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId: lead.id, conversationId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error ?? "Erro ao agendar");
+        return;
+      }
+      if (data.message === "followups already scheduled") {
+        alert("Já existem lembretes agendados para este lead.");
+      } else {
+        alert("Lead marcado como Aguardando resposta. Lembretes da Vi agendados para 24h, 48h, 72h e 120h.");
+      }
+      fetchNewMessages();
+    } catch {
+      alert("Erro ao marcar cliente parou de responder");
+    } finally {
+      setParouResponderLoading(false);
+    }
+  }
+
   function groupMessagesByDate(msgs: Message[]) {
     const groups: { date: string; messages: Message[] }[] = [];
     let currentDate = "";
@@ -281,6 +312,20 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
           </Button>
           <Button variant="ghost" size="icon">
             <MoreHorizontal className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClienteParouResponder}
+            disabled={parouResponderLoading}
+            title="Cliente parou de responder: agenda lembretes"
+          >
+            {parouResponderLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <MessageCircleOff className="h-4 w-4 mr-1" />
+            )}
+            Parou de responder
           </Button>
           <Button
             onClick={handleHandoff}

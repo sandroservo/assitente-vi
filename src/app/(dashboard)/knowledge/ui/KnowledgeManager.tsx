@@ -396,9 +396,9 @@ export function KnowledgeManager({ initialItems, categories }: Props) {
                           </p>
                           {item.keywords && (
                             <div className="mt-2 flex gap-1 flex-wrap">
-                              {item.keywords.split(",").map((kw) => (
+                              {item.keywords.split(",").map((kw, i) => (
                                 <span
-                                  key={kw}
+                                  key={`${item.id}-kw-${i}`}
                                   className="px-2 py-0.5 bg-white border text-gray-500 text-xs rounded"
                                 >
                                   {kw.trim()}

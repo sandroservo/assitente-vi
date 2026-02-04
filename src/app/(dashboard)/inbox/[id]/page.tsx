@@ -6,10 +6,11 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import ChatComposer from "./ui/ChatComposer";
+import InboxConversation from "./ui/InboxConversation";
 import HandoffButton from "./ui/HandoffButton";
+import ClienteParouResponderButton from "./ui/ClienteParouResponderButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { User, Phone, Mail, MapPin, Bot, UserCheck } from "lucide-react";
 
@@ -91,6 +92,11 @@ export default async function ChatPage({
             isHuman={convo.lead.ownerType === "human"}
           />
 
+          <ClienteParouResponderButton
+            leadId={convo.leadId}
+            conversationId={convo.id}
+          />
+
           {convo.lead.summary && (
             <>
               <Separator />
@@ -108,42 +114,10 @@ export default async function ChatPage({
           <CardTitle className="text-base">Conversa</CardTitle>
         </CardHeader>
         <Separator />
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-3">
-            {convo.messages.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhuma mensagem ainda
-              </p>
-            )}
-            {convo.messages.map((m: typeof convo.messages[number]) => (
-              <div
-                key={m.id}
-                className={`flex ${
-                  m.direction === "out" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[70%] p-3 rounded-lg ${
-                    m.direction === "out"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{m.body}</p>
-                  <p
-                    className={`text-[10px] mt-1 ${
-                      m.direction === "out"
-                        ? "text-primary-foreground/70"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    {m.createdAt.toLocaleString("pt-BR")}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
+        <InboxConversation
+          conversationId={convo.id}
+          initialMessages={convo.messages}
+        />
         <Separator />
         <div className="p-4">
           <ChatComposer conversationId={convo.id} />

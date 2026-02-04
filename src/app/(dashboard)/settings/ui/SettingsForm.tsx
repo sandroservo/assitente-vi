@@ -26,6 +26,54 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+const WEBHOOK_PATH = "/api/asaas/webhook";
+
+function AsaasWebhookUrlCopy() {
+  const [copied, setCopied] = useState(false);
+  const url = typeof window !== "undefined"
+    ? `${window.location.origin}${WEBHOOK_PATH}`
+    : `https://vi.amovidas.com.br${WEBHOOK_PATH}`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>URL para colar no Asaas</Label>
+      <div className="flex gap-2">
+        <Input
+          readOnly
+          value={url}
+          className="bg-muted font-mono text-sm"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={handleCopy}
+          title="Copiar URL"
+        >
+          {copied ? (
+            <Check className="h-4 w-4 text-green-600" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+      <p className="text-xs text-gray-500">
+        Copie esta URL e cole nas configurações de webhook do Asaas (Integrações → Webhooks).
+      </p>
+    </div>
+  );
+}
+
 interface SettingsFormProps {
   settings: {
     evolutionBaseUrl: string;
@@ -236,16 +284,17 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <AsaasWebhookUrlCopy />
               <div className="space-y-2">
-                <Label htmlFor="asaasWebhookUrl">URL do Webhook Asaas</Label>
+                <Label htmlFor="asaasWebhookUrl">URL do Webhook Asaas (opcional)</Label>
                 <Input
                   id="asaasWebhookUrl"
                   value={formData.asaasWebhookUrl}
                   onChange={(e) => handleChange("asaasWebhookUrl", e.target.value)}
-                  placeholder="https://seu-app.replit.dev/api/asaas/webhook"
+                  placeholder="https://vi.amovidas.com.br/api/asaas/webhook"
                 />
                 <p className="text-xs text-gray-500">
-                  Configure esta URL nas configurações de webhook do Asaas
+                  Pode salvar aqui a mesma URL que configurou no Asaas (apenas referência).
                 </p>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">

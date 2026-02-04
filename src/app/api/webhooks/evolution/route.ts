@@ -206,6 +206,7 @@ export async function POST(req: Request) {
     // Gera resposta humanizada com IA (Vi - Amo Vidas)
     const { response: botResponse, extractedData } = await generateAIResponse(text ?? "", {
       leadId: lead.id,
+      organizationId: lead.organizationId,
       leadName: lead.name,
       leadEmail: lead.email,
       leadPhone: lead.phone,

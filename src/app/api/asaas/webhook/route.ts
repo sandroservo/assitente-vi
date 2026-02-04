@@ -1,16 +1,16 @@
 /**
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
- * 
- * Webhook do Asaas para processar notificações de pagamento
+ *
+ * Webhook do Asaas para processar notificações de pagamento.
+ * Grava todo evento no banco (AsaasWebhookLog) e depois processa.
  */
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { evolutionSendText } from "@/lib/evolution";
 
-// Tipos de eventos do Asaas
-type AsaasEvent = 
+type AsaasEvent =
   | "PAYMENT_CONFIRMED"
   | "PAYMENT_RECEIVED"
   | "PAYMENT_CREATED"
@@ -22,26 +22,27 @@ type AsaasEvent =
   | "PAYMENT_CHARGEBACK_DISPUTE"
   | "PAYMENT_AWAITING_CHARGEBACK_REVERSAL";
 
-interface AsaasWebhookPayload {
-  event: AsaasEvent;
-  payment: {
-    id: string;
-    customer: string;
-    value: number;
-    netValue: number;
-    description?: string;
-    billingType: string;
-    status: string;
-    invoiceUrl?: string;
-    externalReference?: string;
-    customerName?: string;
-    customerEmail?: string;
-    customerPhone?: string;
-    customerCpfCnpj?: string;
-  };
+interface AsaasPayment {
+  id?: string;
+  customer?: string | { mobilePhone?: string; email?: string; name?: string };
+  value?: number;
+  netValue?: number;
+  description?: string;
+  billingType?: string;
+  status?: string;
+  invoiceUrl?: string;
+  externalReference?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  customerCpfCnpj?: string;
 }
 
-// Mensagens de acordo com o evento
+interface AsaasWebhookPayload {
+  event: AsaasEvent;
+  payment?: AsaasPayment;
+}
+
 const MESSAGES = {
   PAYMENT_CONFIRMED: `🎉 Pagamento confirmado!
 
@@ -56,37 +57,90 @@ Qualquer dúvida, estou por aqui! 😊`,
 Posso te ajudar com alguma coisa? Se precisar de um novo link de pagamento, é só me avisar! 💜`,
 };
 
-export async function POST(req: Request) {
-  try {
-    const payload: AsaasWebhookPayload = await req.json();
-    
-    console.log("[Asaas Webhook] Evento recebido:", payload.event);
-    console.log("[Asaas Webhook] Payment ID:", payload.payment?.id);
+function getPhoneFromPayment(payment: AsaasPayment): string | null {
+  const fromTop = payment.customerPhone?.replace(/\D/g, "");
+  if (fromTop) return fromTop;
+  const customer = payment.customer;
+  if (customer && typeof customer === "object" && customer.mobilePhone) {
+    return String(customer.mobilePhone).replace(/\D/g, "") || null;
+  }
+  return null;
+}
 
-    const { event, payment } = payload;
+function getEmailFromPayment(payment: AsaasPayment): string | null {
+  if (payment.customerEmail) return payment.customerEmail;
+  const customer = payment.customer;
+  if (customer && typeof customer === "object" && customer.email) {
+    return String(customer.email) || null;
+  }
+  return null;
+}
+
+function getCustomerNameFromPayment(payment: AsaasPayment): string | null {
+  if (payment.customerName) return payment.customerName;
+  const customer = payment.customer;
+  if (customer && typeof customer === "object" && customer.name) {
+    return String(customer.name) || null;
+  }
+  return null;
+}
+
+export async function POST(req: Request) {
+  let logId: string | null = null;
+
+  try {
+    const rawBody = await req.text();
+    const payload: AsaasWebhookPayload = JSON.parse(rawBody);
+
+    const event = payload.event;
+    const payment = payload.payment;
+
+    console.log("[Asaas Webhook] Evento recebido:", event);
+    console.log("[Asaas Webhook] Payment ID:", payment?.id);
 
     if (!payment) {
+      await prisma.asaasWebhookLog.create({
+        data: {
+          event: event ?? "UNKNOWN",
+          rawPayload: rawBody,
+          processed: false,
+          errorMsg: "Payload sem payment",
+        },
+      });
       return NextResponse.json({ ok: false, error: "Payload inválido" }, { status: 400 });
     }
 
-    // Busca o lead pelo telefone ou email
-    const phone = payment.customerPhone?.replace(/\D/g, "") || null;
-    const email = payment.customerEmail || null;
+    // Sempre grava no banco primeiro (auditoria)
+    const webhookLog = await prisma.asaasWebhookLog.create({
+      data: {
+        event,
+        paymentId: payment.id ?? null,
+        rawPayload: rawBody,
+        processed: false,
+      },
+    });
+    logId = webhookLog.id;
 
-    let lead = null;
+    const phone = getPhoneFromPayment(payment);
+    const email = getEmailFromPayment(payment);
+    const customerName = getCustomerNameFromPayment(payment);
 
-    if (phone) {
-      // Tenta buscar pelo telefone (formato brasileiro)
-      const phoneVariations = [
-        phone,
-        `55${phone}`,
-        phone.replace(/^55/, ""),
-      ];
+    let lead: { id: string; phone: string; name: string | null; email: string | null; conversations: { id: string }[] } | null = null;
 
+    // 1) Tenta por externalReference (ex: leadId enviado na cobrança)
+    if (payment.externalReference) {
+      lead = await prisma.lead.findUnique({
+        where: { id: payment.externalReference },
+        include: { conversations: { take: 1, orderBy: { lastMessageAt: "desc" }, select: { id: true } } },
+      });
+    }
+
+    if (!lead && phone) {
+      const phoneVariations = [phone, `55${phone}`, phone.replace(/^55/, "")];
       for (const phoneVar of phoneVariations) {
         lead = await prisma.lead.findFirst({
           where: { phone: { contains: phoneVar } },
-          include: { conversations: { take: 1, orderBy: { lastMessageAt: "desc" } } },
+          include: { conversations: { take: 1, orderBy: { lastMessageAt: "desc" }, select: { id: true } } },
         });
         if (lead) break;
       }
@@ -95,32 +149,32 @@ export async function POST(req: Request) {
     if (!lead && email) {
       lead = await prisma.lead.findFirst({
         where: { email },
-        include: { conversations: { take: 1, orderBy: { lastMessageAt: "desc" } } },
+        include: { conversations: { take: 1, orderBy: { lastMessageAt: "desc" }, select: { id: true } } },
       });
     }
 
-    // Processa eventos de pagamento
     switch (event) {
       case "PAYMENT_CONFIRMED":
       case "PAYMENT_RECEIVED": {
         if (lead) {
-          // Atualiza status do lead para FECHADO
           await prisma.lead.update({
             where: { id: lead.id },
-            data: { 
+            data: {
               status: "FECHADO",
-              name: lead.name || payment.customerName || null,
-              email: lead.email || payment.customerEmail || null,
+              name: lead.name || customerName || null,
+              email: lead.email || email || null,
             },
           });
 
-          // Envia mensagem de boas-vindas
-          await evolutionSendText({ 
-            number: lead.phone, 
-            text: MESSAGES.PAYMENT_CONFIRMED 
-          });
+          try {
+            await evolutionSendText({
+              number: lead.phone,
+              text: MESSAGES.PAYMENT_CONFIRMED,
+            });
+          } catch (e) {
+            console.error("[Asaas Webhook] Erro ao enviar WhatsApp:", e);
+          }
 
-          // Salva mensagem no histórico
           if (lead.conversations?.[0]) {
             await prisma.message.create({
               data: {
@@ -132,29 +186,27 @@ export async function POST(req: Request) {
               },
             });
           }
-
           console.log(`[Asaas Webhook] Lead ${lead.id} marcado como FECHADO`);
         } else {
-          console.log("[Asaas Webhook] Lead não encontrado para:", phone || email);
+          console.log("[Asaas Webhook] Lead não encontrado para:", phone || email || payment.externalReference);
         }
         break;
       }
 
       case "PAYMENT_OVERDUE": {
         if (lead) {
-          // Atualiza status para indicar atraso
           await prisma.lead.update({
             where: { id: lead.id },
-            data: { status: "QUALIFICADO" }, // Mantém qualificado mas com follow-up
+            data: { status: "QUALIFICADO" },
           });
-
-          // Envia lembrete
-          await evolutionSendText({ 
-            number: lead.phone, 
-            text: MESSAGES.PAYMENT_OVERDUE 
-          });
-
-          // Salva mensagem no histórico
+          try {
+            await evolutionSendText({
+              number: lead.phone,
+              text: MESSAGES.PAYMENT_OVERDUE,
+            });
+          } catch (e) {
+            console.error("[Asaas Webhook] Erro ao enviar WhatsApp:", e);
+          }
           if (lead.conversations?.[0]) {
             await prisma.message.create({
               data: {
@@ -166,7 +218,6 @@ export async function POST(req: Request) {
               },
             });
           }
-
           console.log(`[Asaas Webhook] Follow-up enviado para lead ${lead.id}`);
         }
         break;
@@ -176,14 +227,43 @@ export async function POST(req: Request) {
         console.log(`[Asaas Webhook] Evento ${event} ignorado`);
     }
 
-    return NextResponse.json({ 
-      ok: true, 
+    if (logId) {
+      await prisma.asaasWebhookLog.update({
+        where: { id: logId },
+        data: { processed: true, leadId: lead?.id ?? null },
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
       event,
       leadFound: !!lead,
+      logId,
     });
-
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error("[Asaas Webhook] Erro:", error);
+
+    if (logId) {
+      await prisma.asaasWebhookLog.update({
+        where: { id: logId },
+        data: { processed: false, errorMsg: errMsg },
+      }).catch(() => {});
+    } else {
+      try {
+        await prisma.asaasWebhookLog.create({
+          data: {
+            event: "ERROR",
+            rawPayload: "",
+            processed: false,
+            errorMsg: errMsg,
+          },
+        });
+      } catch {
+        // ignore
+      }
+    }
+
     return NextResponse.json(
       { ok: false, error: "Erro ao processar webhook" },
       { status: 500 }
@@ -191,15 +271,10 @@ export async function POST(req: Request) {
   }
 }
 
-// GET para verificar se o endpoint está funcionando
 export async function GET() {
-  return NextResponse.json({ 
-    ok: true, 
+  return NextResponse.json({
+    ok: true,
     message: "Webhook Asaas ativo",
-    events: [
-      "PAYMENT_CONFIRMED",
-      "PAYMENT_RECEIVED", 
-      "PAYMENT_OVERDUE",
-    ],
+    events: ["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED", "PAYMENT_OVERDUE"],
   });
 }

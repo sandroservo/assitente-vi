@@ -277,3 +277,18 @@ model LeadMemory {
   @@index([leadId])
   @@index([type])
 }
+
+// Log de webhooks Asaas (auditoria e debug)
+model AsaasWebhookLog {
+  id          String   @id @default(cuid())
+  event       String
+  paymentId   String?
+  rawPayload  String   @db.Text
+  processed   Boolean  @default(false)
+  errorMsg    String?  @db.Text
+  leadId      String?
+  createdAt   DateTime @default(now())
+
+  @@index([event])
+  @@index([createdAt])
+}

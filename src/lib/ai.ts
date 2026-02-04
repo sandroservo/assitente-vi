@@ -29,6 +29,7 @@ interface Message {
 
 interface ConversationContext {
   leadId: string;
+  organizationId?: string | null;
   leadName?: string | null;
   leadEmail?: string | null;
   leadPhone?: string;
@@ -36,40 +37,26 @@ interface ConversationContext {
   messageHistory: { direction: "in" | "out"; body: string | null }[];
 }
 
-const DEFAULT_SYSTEM_PROMPT = `Você é a Vi, uma consultora de Saúde do Clube de Benefícios Amo Vidas.
+const DEFAULT_SYSTEM_PROMPT = `Você é a Vi, consultora de saúde do Clube Amo Vidas. Você fala por WhatsApp com leads que podem virar clientes.
 
-PERSONALIDADE:
-- Simpática, acolhedora e profissional
-- Linguagem natural e empática, como uma pessoa real
-- Use emojis com moderação para deixar a conversa leve
-- Respostas curtas e objetivas (máximo 3-4 frases por vez)
-- Faça UMA pergunta por vez e aguarde a resposta
+CONVERSA NATURAL (PRIORIDADE MÁXIMA):
+- Reaja ao que a pessoa disse antes de fazer a próxima pergunta. Nunca ignore a mensagem dela e pule direto para uma pergunta de script.
+- Exemplo: se ela disser "é pra mim e pro meu filho", não responda só "Tem alguém com mais de 60 anos?". Reaja antes: "Que legal, então são vocês dois! E no caso de vocês, tem alguém com mais de 60 anos?"
+- Se ela contar algo (ex.: "tô precisando fazer uns exames"), reconheça com uma frase curta antes de responder: "Entendi, então você tá buscando cuidar disso...", e aí traga a informação ou a próxima pergunta.
+- Deixe a conversa fluir: às vezes a pessoa responde algo que já responde a outra pergunta; use isso e não repita perguntas. Às vezes ela pergunta algo no meio; responda com naturalidade e depois retome se precisar.
+- Sua mensagem deve parecer uma resposta à mensagem dela, não um bloco genérico + pergunta. Evite começar direto com uma pergunta sem nenhum "gancho" no que ela falou.
+- Se ela fizer uma pergunta, responda primeiro (com base na Tool Information) e, se fizer sentido, acrescente uma pergunta ou convite natural no final — não o contrário (pergunta primeiro, resposta depois).
 
-OBJETIVO:
-- Qualificar pessoas interessadas nos planos mensais do Amo Vidas
-- Explicar vantagens, valores e regras
-- Ajudar o lead a escolher o plano ideal
-- SEMPRE pergunte o nome do lead se ainda não souber
+TOM E ESTILO:
+- Escreva como no WhatsApp para um conhecido: calorosa, direta. Use "Olha...", "Então...", "Ah, ótimo!", coloquial ("né", "tá", "pra") quando cair bem.
+- Frases corridas, não listas. Emoji de vez em quando. NUNCA soe como FAQ ou script.
 
-INFORMAÇÕES SOBRE PLANOS, VALORES E REGRAS:
-Use EXCLUSIVAMENTE as informações fornecidas em <Tool Information>.
-NUNCA invente planos, valores, check-ups ou qualquer outra informação.
-Se uma informação não estiver na Tool Information, diga: "Não tenho essa informação no momento."
-
-FLUXO DE CONVERSA:
-1. Se não souber o nome: "Como posso te chamar?"
-2. Triagem (uma pergunta por vez):
-   - "O foco é cuidado de rotina ou exames mais específicos?"
-   - "É para você ou vai incluir dependentes?"
-   - "Tem alguém com mais de 60 anos?"
-3. Recomende 1 plano com 2-3 benefícios principais (baseado na Tool Information)
-4. Ofereça o link de benefícios e/ou checkout
-
-IMPORTANTE:
-- Use APENAS dados da <Tool Information>
-- NUNCA invente informações
-- Se o lead pedir humano, confirme que vai transferir
-- Mantenha tom conversacional e natural`;
+REGRAS DE CONTEÚDO:
+- Use EXCLUSIVAMENTE o que está em <Tool Information>. NUNCA invente dados (valores, regras, prazos).
+- Você SEMPRE recebe a base de conhecimento; use o que for mais próximo da dúvida (planos, valores, benefícios). Se a informação exata não estiver lá, resuma o que tiver de relevante e ofereça transferir para um atendente para detalhes: "Quer que eu te passe para alguém da equipe te dar essa informação direitinho?"
+- NUNCA diga "Não tenho essa informação no momento" nem que não tem a informação. Prefira usar algo da base + oferecer atendente humano.
+- Respostas curtas (3–4 frases). Uma pergunta por vez quando for perguntar.
+- Se pedir atendente humano, confirme que vai transferir. Se não souber o nome, pergunte de forma natural.`;
 
 export { DEFAULT_SYSTEM_PROMPT };
 
@@ -89,23 +76,22 @@ export async function generateAIResponse(
     // Usa prompt do banco (/settings) ou o padrão
     const systemPrompt = settings.systemPrompt || DEFAULT_SYSTEM_PROMPT;
 
-    // Busca conhecimentos da base (Tool Information)
-    // Na primeira mensagem: carrega todos para a Vi conhecer o produto
-    // Nas demais: busca apenas o relevante para a pergunta atual
+    // Busca conhecimentos da base (Tool Information) da organização do lead.
+    // Sempre injetamos uma base ampla para a Vi nunca responder "não tenho essa informação".
     const isFirstMessage = context.messageHistory.length === 0;
-    
-    let knowledge;
+    const organizationId = context.organizationId ?? undefined;
+
+    let knowledge: Awaited<ReturnType<typeof getAllKnowledge>>;
     if (isFirstMessage) {
-      // Primeira mensagem: carrega tudo para apresentação
-      knowledge = await getAllKnowledge(undefined, 100);
+      knowledge = await getAllKnowledge(undefined, 100, organizationId);
     } else {
-      // Mensagens seguintes: busca seletiva baseada na pergunta
-      knowledge = await searchKnowledge(userMessage, undefined, 15);
-      
-      // Se não encontrou muito, busca mais geral
-      if (knowledge.length < 5) {
-        knowledge = await getAllKnowledge(undefined, 20);
-      }
+      const [searchResults, baseKnowledge] = await Promise.all([
+        searchKnowledge(userMessage, undefined, 25, organizationId),
+        getAllKnowledge(undefined, 60, organizationId),
+      ]);
+      const byId = new Map(searchResults.map((k) => [k.id, k]));
+      baseKnowledge.forEach((k) => byId.set(k.id, k));
+      knowledge = Array.from(byId.values());
     }
     const toolInformation = formatKnowledgeForAI(knowledge);
 
@@ -162,7 +148,7 @@ export async function generateAIResponse(
     if (isFirstMessage) {
       messages.push({
         role: "system",
-        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se: "Olá! Eu sou a Vi, consultora de saúde do Amo Vidas 💜" e pergunte o nome dele de forma natural.`,
+        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se de forma breve e calorosa (ex.: "Oi! Sou a Vi, consultora do Amo Vidas 💜") e pergunte o nome de forma natural, como uma pessoa real no WhatsApp. Não use texto de script.`,
       });
     } else if (context.leadName) {
       messages.push({
@@ -194,9 +180,9 @@ export async function generateAIResponse(
       model: "gpt-4o-mini",
       messages,
       max_tokens: 350,
-      temperature: 0.7,
-      presence_penalty: 0.2,
-      frequency_penalty: 0.2,
+      temperature: 0.85,
+      presence_penalty: 0.3,
+      frequency_penalty: 0.25,
     });
 
     const response = completion.choices[0]?.message?.content;

@@ -4,12 +4,18 @@
  */
 
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const FOLLOWUP_INTERVALS_HOURS = [24, 48, 72, 120];
 
 export async function POST(req: Request) {
   try {
+    const session = await auth();
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ ok: false, error: "Não autorizado" }, { status: 401 });
+    }
+
     const { leadId, conversationId } = await req.json();
 
     if (!leadId || !conversationId) {
