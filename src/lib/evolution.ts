@@ -54,8 +54,14 @@ export async function evolutionSendPresence(number: string, presence: "composing
 export async function evolutionSendText({ number, text }: SendTextArgs) {
   const { baseUrl, instance, token } = await getEvolutionConfig();
 
+  if (!baseUrl || !instance || !token) {
+    throw new Error("Evolution API não configurada (baseUrl, instance ou token faltando)");
+  }
+
   // Evolution API v2 - remove /api do base se existir
   const url = `${baseUrl.replace(/\/api\/?$/, "")}/message/sendText/${instance}`;
+
+  console.log("[Evolution] Sending message to:", url);
 
   const res = await fetch(url, {
     method: "POST",
@@ -67,13 +73,16 @@ export async function evolutionSendText({ number, text }: SendTextArgs) {
       number,
       text,
     }),
+    signal: AbortSignal.timeout(30000), // 30 segundos de timeout
   });
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    console.error("[Evolution] Send failed:", res.status, body);
     throw new Error(`Evolution sendText failed: ${res.status} ${body}`);
   }
 
+  console.log("[Evolution] Message sent successfully");
   return res.json().catch(() => ({}));
 }
 
