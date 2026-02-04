@@ -8,7 +8,7 @@
 import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
+/* eslint-disable @next/next/no-img-element */
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +56,7 @@ function LoginForm() {
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#FE3E6E] via-[#C24695] to-[#7151C9] items-center justify-center p-12">
         <div className="text-center text-white">
           <div className="mb-8">
-            <Image
+<img
               src="/assets/logo.webp"
               alt="Assistente Vi"
               width={180}
@@ -76,7 +76,7 @@ function LoginForm() {
         <div className="w-full max-w-md">
           {/* Logo mobile */}
           <div className="lg:hidden mb-8 text-center">
-            <Image
+<img
               src="/assets/logo.webp"
               alt="Assistente Vi"
               width={100}
