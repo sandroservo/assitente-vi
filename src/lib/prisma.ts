@@ -27,13 +27,15 @@ export type LeadStatus =
 
 const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
-function createPrismaClient() {
+function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
   
   // Durante build, DATABASE_URL pode não estar disponível
   if (!connectionString) {
-    // Retorna um client mock para não quebrar o build
-    return new PrismaClient();
+    // Cria pool com string vazia - só será usado em runtime quando DATABASE_URL existir
+    const pool = new Pool({ connectionString: "postgresql://localhost:5432/dummy" });
+    const adapter = new PrismaPg(pool);
+    return new PrismaClient({ adapter });
   }
 
   const pool = new Pool({ connectionString });
