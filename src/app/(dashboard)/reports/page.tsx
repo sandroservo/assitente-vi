@@ -76,8 +76,8 @@ export default async function ReportsPage() {
 
   // Calcula estatísticas por usuário
   const userStats = users.map((user: typeof users[number]) => {
-    const userHandoffs = handoffs.filter((h) => h.assignedToId === user.id);
-    const completed = userHandoffs.filter((h) => h.status === "closed").length;
+    const userHandoffs = handoffs.filter((h: typeof handoffs[number]) => h.assignedToId === user.id);
+    const completed = userHandoffs.filter((h: typeof handoffs[number]) => h.status === "closed").length;
     
     return {
       ...user,
@@ -93,10 +93,10 @@ export default async function ReportsPage() {
       status: l.status,
       count: l._count,
     })),
-    messagesIn: messages.find((m) => m.direction === "in")?._count || 0,
-    messagesOut: messages.find((m) => m.direction === "out")?._count || 0,
+    messagesIn: messages.find((m: typeof messages[number]) => m.direction === "in")?._count || 0,
+    messagesOut: messages.find((m: typeof messages[number]) => m.direction === "out")?._count || 0,
     totalHandoffs: handoffs.length,
-    completedHandoffs: handoffs.filter((h) => h.status === "closed").length,
+    completedHandoffs: handoffs.filter((h: typeof handoffs[number]) => h.status === "closed").length,
   };
 
   return (
