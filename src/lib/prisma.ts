@@ -29,8 +29,11 @@ const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
+  
+  // Durante build, DATABASE_URL pode não estar disponível
   if (!connectionString) {
-    throw new Error("DATABASE_URL is not defined");
+    // Retorna um client mock para não quebrar o build
+    return new PrismaClient();
   }
 
   const pool = new Pool({ connectionString });
