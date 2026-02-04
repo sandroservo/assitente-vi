@@ -15,11 +15,11 @@ NC='\033[0m'
 SERVER_USER="root"
 SERVER_IP="24.144.95.220"
 SERVER_PORT="22"
-# No servidor: repositório clonado com pasta assistente-vi (ou só a assistente)
 SERVER_DIR="/www/vi-amovidas"
 APP_SUBDIR="assistente-vi"
 SERVICE_NAME="assistente-vi-app"
 PORT="3001"
+REPO_URL="https://github.com/sandroservo/assitente-vi.git"
 
 # Diretório do script: pode ser assistente-vi ou assistente-vi/scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -71,23 +71,31 @@ echo -e "${YELLOW}📤 Enviando código e fazendo deploy no servidor...${NC}"
 
 ssh -p "$SERVER_PORT" "${SERVER_USER}@${SERVER_IP}" bash -s <<EOSSH
 set -e
-# Se SERVER_DIR não existir, clonar o repo (primeira vez)
-if [ ! -d "$SERVER_DIR" ]; then
-  echo "Diretório $SERVER_DIR não existe. Configure primeiro:"
-  echo "  ssh ${SERVER_USER}@${SERVER_IP}"
-  echo "  git clone <URL_DO_REPOSITORIO> $SERVER_DIR"
-  echo "  cd $SERVER_DIR/$APP_SUBDIR && cp .env.example .env && nano .env"
-  echo "  sudo cp $SERVER_DIR/$APP_SUBDIR/scripts/assistente-vi-app.service /etc/systemd/system/"
-  echo "  sudo systemctl daemon-reload && sudo systemctl enable assistente-vi-app"
-  exit 1
+SERVER_DIR="$SERVER_DIR"
+REPO_URL="$REPO_URL"
+APP_SUBDIR="$APP_SUBDIR"
+SERVICE_NAME="$SERVICE_NAME"
+PORT="$PORT"
+
+# Se o diretório não existir: criar pai e clonar
+if [ ! -d "\$SERVER_DIR" ]; then
+  echo "📥 Primeira vez: clonando repositório em \$SERVER_DIR..."
+  mkdir -p "\$(dirname "\$SERVER_DIR")"
+  git clone "\$REPO_URL" "\$SERVER_DIR"
 fi
 
-cd "$SERVER_DIR" || exit 1
+cd "\$SERVER_DIR" || exit 1
+
+# Se existir mas não for repo git: init + fetch (ex.: pasta criada manualmente)
 if [ ! -d .git ]; then
-  echo "❌ $SERVER_DIR não é um repositório git. Clone o repositório primeiro:"
-  echo "   git clone https://github.com/sandroservo/assitente-vi.git $SERVER_DIR"
-  exit 1
+  echo "📥 Inicializando repositório em \$SERVER_DIR..."
+  git init
+  git remote add origin "\$REPO_URL"
+  git fetch origin
+  git branch -M main
+  git reset --hard origin/main
 fi
+
 if [ -n "\$(git status --porcelain --untracked-files=no 2>/dev/null)" ]; then
   git stash push -m "Deploy assistente \$(date +%Y%m%d_%H%M%S)" || true
 fi
@@ -95,15 +103,25 @@ git fetch --all
 git pull origin main || true
 
 # App na raiz do clone (assistente-vi repo) ou em subpasta assistente-vi (monorepo)
-if [ -f "$SERVER_DIR/package.json" ] && [ -f "$SERVER_DIR/next.config.ts" ]; then
-  APP_DIR="$SERVER_DIR"
+if [ -f "\$SERVER_DIR/package.json" ] && [ -f "\$SERVER_DIR/next.config.ts" ]; then
+  APP_DIR="\$SERVER_DIR"
 else
-  APP_DIR="$SERVER_DIR/$APP_SUBDIR"
+  APP_DIR="\$SERVER_DIR/\$APP_SUBDIR"
 fi
 cd "\$APP_DIR" || exit 1
+
+# .env: criar a partir do example se não existir
 if [ ! -f .env ]; then
-  echo "⚠️  .env não encontrado em \$APP_DIR. Crie a partir de .env.example"
-  exit 1
+  cp .env.example .env
+  echo "⚠️  .env criado a partir de .env.example. Edite no servidor: nano \$APP_DIR/.env"
+fi
+
+# Serviço systemd: instalar se não existir (primeira vez)
+if [ ! -f "/etc/systemd/system/\$SERVICE_NAME.service" ] && [ -f "\$APP_DIR/scripts/assistente-vi-app.service" ]; then
+  echo "📋 Instalando serviço systemd \$SERVICE_NAME..."
+  sudo cp "\$APP_DIR/scripts/assistente-vi-app.service" "/etc/systemd/system/\$SERVICE_NAME.service"
+  sudo systemctl daemon-reload
+  sudo systemctl enable "\$SERVICE_NAME"
 fi
 
 echo "📦 Instalando dependências..."
