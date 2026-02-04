@@ -89,9 +89,9 @@ export async function POST(req: Request) {
     });
 
     // Busca foto de perfil se não tiver ainda
-    let profilePicture = avatarUrl;
+    let profilePicture: string | undefined = avatarUrl;
     if (!profilePicture) {
-      profilePicture = await evolutionGetProfilePicture(phone);
+      profilePicture = (await evolutionGetProfilePicture(phone)) ?? undefined;
     }
 
     if (lead) {

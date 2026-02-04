@@ -99,6 +99,7 @@ export async function getKnowledgeById(
  * Cria um novo conhecimento
  */
 export async function createKnowledge(data: {
+  organizationId: string;
   category: string;
   title: string;
   content: string;
@@ -107,6 +108,7 @@ export async function createKnowledge(data: {
 }): Promise<KnowledgeItem> {
   return prisma.knowledge.create({
     data: {
+      organizationId: data.organizationId,
       category: data.category,
       title: data.title,
       content: data.content,

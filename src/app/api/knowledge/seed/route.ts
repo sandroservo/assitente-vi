@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { createKnowledge } from "@/lib/knowledge";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 const INITIAL_KNOWLEDGE = [
   {
@@ -145,8 +146,20 @@ Foco em prevenção e cuidado de rotina.`,
 
 export async function POST() {
   try {
+    const session = await auth();
+    if (!session?.user?.organizationId) {
+      return NextResponse.json(
+        { ok: false, error: "Não autorizado" },
+        { status: 401 }
+      );
+    }
+
+    const organizationId = session.user.organizationId;
+
     // Verifica se já existem conhecimentos
-    const count = await prisma.knowledge.count();
+    const count = await prisma.knowledge.count({
+      where: { organizationId },
+    });
     
     if (count > 0) {
       return NextResponse.json({
@@ -158,7 +171,7 @@ export async function POST() {
 
     // Cria os conhecimentos iniciais
     for (const item of INITIAL_KNOWLEDGE) {
-      await createKnowledge(item);
+      await createKnowledge({ ...item, organizationId });
     }
 
     return NextResponse.json({

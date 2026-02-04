@@ -64,10 +64,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.organizationId = user.organizationId;
-        token.organizationName = user.organizationName;
+        token.id = user.id as string;
+        token.role = user.role as string;
+        token.organizationId = user.organizationId as string;
+        token.organizationName = user.organizationName as string;
       }
       return token;
     },

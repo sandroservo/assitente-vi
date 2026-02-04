@@ -14,6 +14,7 @@ interface ChatItem {
   id: string;
   name: string | null;
   pushName: string | null;
+  avatarUrl: string | null;
   phone: string;
   status: string;
   ownerType: "bot" | "human";

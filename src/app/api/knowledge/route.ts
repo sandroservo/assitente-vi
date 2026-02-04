@@ -12,6 +12,7 @@ import {
   createKnowledge,
   KNOWLEDGE_CATEGORIES,
 } from "@/lib/knowledge";
+import { auth } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +43,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.organizationId) {
+      return NextResponse.json(
+        { ok: false, error: "Não autorizado" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     if (!body.category || !body.title || !body.content) {
@@ -52,6 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const knowledge = await createKnowledge({
+      organizationId: session.user.organizationId,
       category: body.category,
       title: body.title,
       content: body.content,
