@@ -15,7 +15,7 @@ export default async function ChatsPage() {
     take: 100,
   });
 
-  const chats = conversations.map((c) => ({
+  const chats = conversations.map((c: typeof conversations[number]) => ({
     id: c.id,
     name: c.lead.name,
     pushName: c.lead.pushName,
