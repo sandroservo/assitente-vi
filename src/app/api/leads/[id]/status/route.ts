@@ -5,7 +5,20 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { LeadStatus } from "@prisma/client";
+
+const VALID_LEAD_STATUS = [
+  "NOVO",
+  "EM_ATENDIMENTO",
+  "QUALIFICADO",
+  "LEAD_FRIO",
+  "PROPOSTA_ENVIADA",
+  "EM_NEGOCIACAO",
+  "AGUARDANDO_RESPOSTA",
+  "FECHADO",
+  "PERDIDO",
+  "HUMANO_SOLICITADO",
+  "HUMANO_EM_ATENDIMENTO",
+] as const;
 
 export async function PATCH(
   req: Request,
@@ -15,7 +28,7 @@ export async function PATCH(
     const { id } = await params;
     const { status } = await req.json();
 
-    if (!status || !Object.values(LeadStatus).includes(status)) {
+    if (!status || !VALID_LEAD_STATUS.includes(status)) {
       return NextResponse.json(
         { ok: false, error: "invalid status" },
         { status: 400 }

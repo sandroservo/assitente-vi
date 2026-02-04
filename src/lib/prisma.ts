@@ -12,6 +12,19 @@ export type TransactionClient = Omit<
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends"
 >;
 
+export type LeadStatus =
+  | "NOVO"
+  | "EM_ATENDIMENTO"
+  | "QUALIFICADO"
+  | "LEAD_FRIO"
+  | "PROPOSTA_ENVIADA"
+  | "EM_NEGOCIACAO"
+  | "AGUARDANDO_RESPOSTA"
+  | "FECHADO"
+  | "PERDIDO"
+  | "HUMANO_SOLICITADO"
+  | "HUMANO_EM_ATENDIMENTO";
+
 const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
 function createPrismaClient() {

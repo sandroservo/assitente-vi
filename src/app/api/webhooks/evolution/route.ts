@@ -7,10 +7,9 @@
  */
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, LeadStatus } from "@/lib/prisma";
 import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture } from "@/lib/evolution";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus } from "@/lib/ai";
-import { LeadStatus } from "@prisma/client";
 
 function phoneFromJid(remoteJid: string) {
   return remoteJid.split("@")[0];
