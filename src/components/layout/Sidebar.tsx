@@ -8,6 +8,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -17,6 +18,7 @@ import {
   BookOpen,
   Users,
   BarChart3,
+  LogOut,
 } from "lucide-react";
 
 const navItems = [
@@ -39,8 +41,8 @@ export function Sidebar() {
           <Image 
             src="/assets/logo.webp" 
             alt="Amo Vidas" 
-            width={80} 
-            height={80} 
+            width={140} 
+            height={140} 
           />
         </Link>
       </div>
@@ -91,6 +93,16 @@ export function Sidebar() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="px-3 pb-4">
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium w-full text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+        >
+          <LogOut className="h-5 w-5" />
+          Sair
+        </button>
       </div>
     </aside>
   );

@@ -18,18 +18,20 @@ export async function GET() {
       take: 100,
     });
 
-    const chats = convos.map((c) => ({
+    const conversations = convos.map((c) => ({
       id: c.id,
       name: c.lead.name,
-      pushName: (c.lead as { pushName?: string | null }).pushName ?? null,
+      pushName: c.lead.pushName,
+      avatarUrl: c.lead.avatarUrl,
       phone: c.lead.phone,
       status: c.lead.status,
       ownerType: c.lead.ownerType,
       unreadCount: c.unreadCount,
       lastMessageAt: c.lastMessageAt,
+      isPinned: false,
     }));
 
-    return NextResponse.json({ chats });
+    return NextResponse.json({ conversations });
   } catch (error) {
     console.error("Erro ao buscar conversas:", error);
     return NextResponse.json({ chats: [] }, { status: 500 });

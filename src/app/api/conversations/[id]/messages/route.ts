@@ -57,6 +57,8 @@ export async function GET(
       lead: {
         id: conversation.lead.id,
         name: conversation.lead.name,
+        pushName: conversation.lead.pushName,
+        avatarUrl: conversation.lead.avatarUrl,
         phone: conversation.lead.phone,
         status: conversation.lead.status,
         ownerType: conversation.lead.ownerType,

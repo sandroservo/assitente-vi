@@ -138,6 +138,7 @@ model Lead {
   organizationId String
   name           String?
   pushName       String?
+  avatarUrl      String?    // URL do avatar do WhatsApp
   email          String?
   phone          String
   city           String?

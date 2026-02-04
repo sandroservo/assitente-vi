@@ -14,6 +14,7 @@ export interface SystemSettings {
   webhookSecret: string;
   openaiApiKey: string;
   systemPrompt: string;
+  asaasWebhookUrl: string;
 }
 
 const SETTINGS_KEYS = {
@@ -23,6 +24,7 @@ const SETTINGS_KEYS = {
   WEBHOOK_SECRET: "webhook_secret",
   OPENAI_API_KEY: "openai_api_key",
   SYSTEM_PROMPT: "system_prompt",
+  ASAAS_WEBHOOK_URL: "asaas_webhook_url",
 };
 
 export async function getSetting(key: string): Promise<string | null> {
@@ -72,6 +74,9 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     systemPrompt:
       map.get(SETTINGS_KEYS.SYSTEM_PROMPT) ||
       "",
+    asaasWebhookUrl:
+      map.get(SETTINGS_KEYS.ASAAS_WEBHOOK_URL) ||
+      "",
   };
 }
 
@@ -119,6 +124,13 @@ export async function saveSystemSettings(
     updates.push({
       key: SETTINGS_KEYS.SYSTEM_PROMPT,
       value: settings.systemPrompt,
+      encrypted: false,
+    });
+  }
+  if (settings.asaasWebhookUrl !== undefined) {
+    updates.push({
+      key: SETTINGS_KEYS.ASAAS_WEBHOOK_URL,
+      value: settings.asaasWebhookUrl,
       encrypted: false,
     });
   }

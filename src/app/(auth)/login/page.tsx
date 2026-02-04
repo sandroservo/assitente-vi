@@ -9,7 +9,6 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -160,14 +159,8 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-gray-500">
-              Não tem uma conta?{" "}
-              <Link
-                href="/register"
-                className="text-[#FE3E6E] hover:text-[#C24695] font-semibold"
-              >
-                Cadastre-se
-              </Link>
+            <div className="mt-6 text-center text-sm text-gray-400">
+              Solicite acesso ao administrador do sistema
             </div>
           </div>
         </div>

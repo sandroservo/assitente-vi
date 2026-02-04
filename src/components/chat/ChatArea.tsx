@@ -9,7 +9,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { formatPhone } from "@/lib/formatters";
 import {
@@ -37,6 +36,7 @@ interface Lead {
   id: string;
   name: string | null;
   pushName: string | null;
+  avatarUrl: string | null;
   phone: string;
   email: string | null;
   city: string | null;
@@ -61,6 +61,7 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [lead, setLead] = useState(initialLead);
   const [isConnected, setIsConnected] = useState(true);
+  const [activeTab, setActiveTab] = useState("conversa");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTime = useRef<string | null>(null);
   const shouldAutoScroll = useRef(true);
@@ -116,6 +117,7 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
           ...prev,
           name: data.lead.name,
           pushName: data.lead.pushName,
+          avatarUrl: data.lead.avatarUrl,
           status: data.lead.status,
           ownerType: data.lead.ownerType,
         }));
@@ -226,14 +228,33 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
     <div className="flex-1 flex flex-col bg-gray-50 h-full overflow-hidden min-h-0">
       <header className="bg-white border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-medium">
-            {(lead.name || lead.pushName)?.[0]?.toUpperCase() || "?"}
-          </div>
+          {lead.avatarUrl ? (
+            <img 
+              src={lead.avatarUrl} 
+              alt={lead.name || lead.pushName || "Avatar"}
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-medium">
+              {(lead.name || lead.pushName)?.[0]?.toUpperCase() || "?"}
+            </div>
+          )}
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-semibold">{lead.name || lead.pushName || "Sem nome"}</h2>
-              <Badge className="bg-blue-100 text-blue-700 text-xs">
-                {lead.status.replace(/_/g, " ")}
+              <Badge className={cn(
+                "text-xs",
+                lead.ownerType === "human" 
+                  ? "bg-purple-100 text-purple-700"
+                  : lead.status === "HUMANO_SOLICITADO"
+                    ? "bg-orange-100 text-orange-700"
+                    : "bg-blue-100 text-blue-700"
+              )}>
+                {lead.ownerType === "human" 
+                  ? "Atendimento Humano"
+                  : lead.status === "HUMANO_SOLICITADO"
+                    ? "Aguardando Humano"
+                    : lead.status.replace(/_/g, " ")}
               </Badge>
             </div>
             <p className="text-sm text-gray-500 flex items-center gap-1">
@@ -282,42 +303,39 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
         </div>
       </header>
 
-      <Tabs defaultValue="conversa" className="flex-1 flex flex-col min-h-0">
-        <div className="bg-white border-b px-6 flex-shrink-0">
-          <TabsList className="bg-transparent h-auto p-0 gap-6">
-            <TabsTrigger
-              value="conversa"
-              className="data-[state=active]:text-pink-600 data-[state=active]:border-b-2 data-[state=active]:border-pink-500 rounded-none px-0 pb-3 pt-3"
-            >
-              Conversa
-            </TabsTrigger>
-            <TabsTrigger
-              value="detalhes"
-              className="data-[state=active]:text-pink-600 data-[state=active]:border-b-2 data-[state=active]:border-pink-500 rounded-none px-0 pb-3 pt-3"
-            >
-              Detalhes
-            </TabsTrigger>
-            <TabsTrigger
-              value="anotacoes"
-              className="data-[state=active]:text-pink-600 data-[state=active]:border-b-2 data-[state=active]:border-pink-500 rounded-none px-0 pb-3 pt-3"
-            >
-              Anotações
-            </TabsTrigger>
-            <TabsTrigger
-              value="historico"
-              className="data-[state=active]:text-pink-600 data-[state=active]:border-b-2 data-[state=active]:border-pink-500 rounded-none px-0 pb-3 pt-3"
-            >
-              Histórico
-            </TabsTrigger>
-          </TabsList>
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="bg-white flex-shrink-0">
+          <div className="flex border-b border-gray-200">
+            {["conversa", "detalhes", "anotacoes", "historico"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "flex-1 py-3 text-sm font-medium transition-colors relative",
+                  activeTab === tab
+                    ? "text-pink-600"
+                    : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                {tab === "conversa" && "Conversa"}
+                {tab === "detalhes" && "Detalhes"}
+                {tab === "anotacoes" && "Anotações"}
+                {tab === "historico" && "Histórico"}
+                {activeTab === tab && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500" />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <TabsContent value="conversa" className="flex-1 flex flex-col m-0 min-h-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 min-h-0">
+        {activeTab === "conversa" && (
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0 bg-[#f0f2f5]" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%239C92AC\" fill-opacity=\"0.05\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')" }}>
             {groupedMessages.map((group) => (
               <div key={group.date}>
                 <div className="flex justify-center my-4">
-                  <span className="bg-white px-4 py-1 rounded-full text-xs text-gray-500 shadow-sm">
+                  <span className="bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-lg text-xs text-gray-600 shadow-sm font-medium">
                     {isToday(group.date) ? "Hoje" : group.date}
                   </span>
                 </div>
@@ -326,64 +344,76 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
                   <div
                     key={msg.id}
                     className={cn(
-                      "flex mb-4",
+                      "flex mb-3",
                       msg.direction === "out" ? "justify-end" : "justify-start"
                     )}
                   >
                     <div
                       className={cn(
-                        "max-w-[70%] flex gap-3",
+                        "max-w-[75%] md:max-w-[65%] flex gap-2",
                         msg.direction === "out" ? "flex-row-reverse" : "flex-row"
                       )}
                     >
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium",
-                          msg.direction === "out"
-                            ? "bg-pink-500 text-white"
-                            : "bg-gray-300 text-gray-700"
-                        )}
-                      >
-                        {msg.direction === "out"
-                          ? lead.ownerType === "human"
-                            ? "H"
-                            : "Vi"
-                          : (lead.name || lead.pushName)?.[0]?.toUpperCase() || "?"}
-                      </div>
+                      {msg.direction === "in" ? (
+                        lead.avatarUrl ? (
+                          <img 
+                            src={lead.avatarUrl} 
+                            alt=""
+                            className="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-white shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold bg-gradient-to-br from-gray-400 to-gray-500 text-white ring-2 ring-white shadow-sm">
+                            {(lead.name || lead.pushName)?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )
+                      ) : (
+                        <div className={cn(
+                          "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ring-2 ring-white shadow-sm",
+                          lead.ownerType === "human"
+                            ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white"
+                            : "bg-gradient-to-br from-pink-500 to-pink-600 text-white"
+                        )}>
+                          {lead.ownerType === "human" ? "👤" : "Vi"}
+                        </div>
+                      )}
 
-                      <div>
-                        <p
-                          className={cn(
-                            "text-xs mb-1",
-                            msg.direction === "out" ? "text-right" : "text-left"
-                          )}
-                        >
-                          {msg.direction === "out"
-                            ? lead.ownerType === "human"
-                              ? "Você (Comercial)"
-                              : "Vi (Bot)"
-                            : lead.name || lead.pushName || "Lead"}
-                        </p>
+                      <div className="flex flex-col">
                         <div
                           className={cn(
-                            "p-3 rounded-2xl",
+                            "relative px-4 py-2.5 shadow-sm",
                             msg.direction === "out"
-                              ? "bg-pink-500 text-white rounded-tr-sm"
-                              : "bg-white shadow-sm rounded-tl-sm"
+                              ? lead.ownerType === "human"
+                                ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl rounded-tr-md"
+                                : "bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-2xl rounded-tr-md"
+                              : "bg-white text-gray-800 rounded-2xl rounded-tl-md"
                           )}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                          <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{msg.body}</p>
+                          <div className={cn(
+                            "flex items-center gap-1 mt-1",
+                            msg.direction === "out" ? "justify-end" : "justify-start"
+                          )}>
+                            <span className={cn(
+                              "text-[10px]",
+                              msg.direction === "out" ? "text-white/70" : "text-gray-400"
+                            )}>
+                              {new Date(msg.createdAt).toLocaleTimeString("pt-BR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                            {msg.direction === "out" && (
+                              <span className="text-white/70 text-[10px]">✓✓</span>
+                            )}
+                          </div>
                         </div>
-                        <p
-                          className={cn(
-                            "text-[10px] text-gray-400 mt-1",
-                            msg.direction === "out" ? "text-right" : "text-left"
-                          )}
-                        >
-                          {new Date(msg.createdAt).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                        <p className={cn(
+                          "text-[10px] text-gray-500 mt-1 px-1",
+                          msg.direction === "out" ? "text-right" : "text-left"
+                        )}>
+                          {msg.direction === "out"
+                            ? lead.ownerType === "human" ? "Você" : "Vi"
+                            : lead.name || lead.pushName || "Lead"}
                         </p>
                       </div>
                     </div>
@@ -394,10 +424,13 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="bg-white border-t p-4 flex-shrink-0">
-            <div className="flex items-center gap-3">
+          <div className="bg-[#f0f2f5] border-t p-3 md:p-4 flex-shrink-0">
+            <div className="flex items-center gap-2 md:gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
+                <Paperclip className="h-5 w-5 text-gray-500" />
+              </Button>
               <Input
-                placeholder="Escreva sua mensagem aqui"
+                placeholder="Digite uma mensagem..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {
@@ -406,93 +439,95 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
                     sendMessage();
                   }
                 }}
-                className="flex-1 bg-gray-50 border-gray-200"
+                className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-400"
                 disabled={loading}
               />
-              <Button variant="ghost" size="icon">
-                <Paperclip className="h-5 w-5 text-gray-400" />
-              </Button>
-              <Button variant="ghost" size="icon">
-                <Mic className="h-5 w-5 text-gray-400" />
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
+                <Mic className="h-5 w-5 text-gray-500" />
               </Button>
               <Button
                 onClick={sendMessage}
                 disabled={loading || !text.trim()}
-                className="bg-pink-500 hover:bg-pink-600"
+                size="icon"
+                className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
               >
                 {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <>
-                    Enviar
-                    <Send className="h-4 w-4 ml-2" />
-                  </>
+                  <Send className="h-5 w-5" />
                 )}
               </Button>
             </div>
           </div>
-        </TabsContent>
+        </div>
+        )}
 
-        <TabsContent value="detalhes" className="flex-1 p-6 m-0">
-          <div className="bg-white rounded-xl p-6 shadow-sm space-y-4">
-            <h3 className="font-semibold">Informações do Lead</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">Nome</p>
-                <p className="font-medium">{lead.name || lead.pushName || "Não informado"}</p>
+        {activeTab === "detalhes" && (
+          <div className="flex-1 p-6 overflow-auto">
+            <div className="bg-white rounded-xl p-6 shadow-sm space-y-4">
+              <h3 className="font-semibold">Informações do Lead</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500">Nome</p>
+                  <p className="font-medium">{lead.name || lead.pushName || "Não informado"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Telefone</p>
+                  <p className="font-medium">{formatPhone(lead.phone)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Email</p>
+                  <p className="font-medium">{lead.email || "Não informado"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Cidade</p>
+                  <p className="font-medium">{lead.city || "Não informado"}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Status</p>
+                  <p className="font-medium">{lead.status.replace(/_/g, " ")}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Atendimento</p>
+                  <p className="font-medium">
+                    {lead.ownerType === "human" ? "Humano" : "Bot (Vi)"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-gray-500">Telefone</p>
-                <p className="font-medium">{formatPhone(lead.phone)}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Email</p>
-                <p className="font-medium">{lead.email || "Não informado"}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Cidade</p>
-                <p className="font-medium">{lead.city || "Não informado"}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Status</p>
-                <p className="font-medium">{lead.status.replace(/_/g, " ")}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Atendimento</p>
-                <p className="font-medium">
-                  {lead.ownerType === "human" ? "Humano" : "Bot (Vi)"}
-                </p>
-              </div>
+              {lead.summary && (
+                <div>
+                  <p className="text-gray-500 text-sm">Resumo</p>
+                  <p className="text-sm mt-1">{lead.summary}</p>
+                </div>
+              )}
             </div>
-            {lead.summary && (
-              <div>
-                <p className="text-gray-500 text-sm">Resumo</p>
-                <p className="text-sm mt-1">{lead.summary}</p>
-              </div>
-            )}
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="anotacoes" className="flex-1 p-6 m-0">
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <h3 className="font-semibold mb-4">Anotações</h3>
-            <textarea
-              placeholder="Adicione notas sobre este lead..."
-              className="w-full h-40 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500"
-              defaultValue={lead.notes || ""}
-            />
+        {activeTab === "anotacoes" && (
+          <div className="flex-1 p-6 overflow-auto">
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <h3 className="font-semibold mb-4">Anotações</h3>
+              <textarea
+                placeholder="Adicione notas sobre este lead..."
+                className="w-full h-40 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500"
+                defaultValue={lead.notes || ""}
+              />
+            </div>
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="historico" className="flex-1 p-6 m-0">
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <h3 className="font-semibold mb-4">Histórico de Interações</h3>
-            <p className="text-gray-500 text-sm">
-              {messages.length} mensagens trocadas
-            </p>
+        {activeTab === "historico" && (
+          <div className="flex-1 p-6 overflow-auto">
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <h3 className="font-semibold mb-4">Histórico de Interações</h3>
+              <p className="text-gray-500 text-sm">
+                {messages.length} mensagens trocadas
+              </p>
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { LeadsKanban } from "@/app/leads/ui/LeadsKanban";
+import { LeadsKanban } from "@/app/(dashboard)/leads/ui/LeadsKanban";
 
 export default async function KanbanPage() {
   const leadsData = await prisma.lead.findMany({

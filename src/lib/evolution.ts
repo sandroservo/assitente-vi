@@ -158,6 +158,39 @@ function sleep(ms: number): Promise<void> {
  * - Mostra "digitando" antes de cada parte
  * - Pausa entre mensagens
  */
+/**
+ * Busca a foto de perfil de um contato no WhatsApp
+ */
+export async function evolutionGetProfilePicture(number: string): Promise<string | null> {
+  const { baseUrl, instance, token } = await getEvolutionConfig();
+  
+  // Endpoint correto da Evolution API v2: /chat/fetchProfile
+  const url = `${baseUrl.replace(/\/api\/?$/, "")}/chat/fetchProfile/${instance}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: token,
+      },
+      body: JSON.stringify({ number }),
+    });
+
+    if (!res.ok) {
+      console.log(`[Evolution] Erro ao buscar perfil: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    // O campo correto é "picture" no endpoint fetchProfile
+    return data?.picture || data?.profilePictureUrl || null;
+  } catch (error) {
+    console.error("[Evolution] Erro ao buscar foto de perfil:", error);
+    return null;
+  }
+}
+
 export async function evolutionSendTextHumanized({ number, text }: SendTextArgs) {
   const parts = splitMessage(text);
   

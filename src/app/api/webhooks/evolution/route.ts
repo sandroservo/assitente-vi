@@ -8,7 +8,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { evolutionSendText, evolutionSendTextHumanized } from "@/lib/evolution";
+import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture } from "@/lib/evolution";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus } from "@/lib/ai";
 import { LeadStatus } from "@prisma/client";
 
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     const providerId: string | undefined = payload?.data?.key?.id;
     const pushName: string | undefined = payload?.data?.pushName;
     const instanceName: string | undefined = payload?.instance;
+    const avatarUrl: string | undefined = payload?.data?.profilePictureUrl;
 
     const text: string | undefined =
       payload?.data?.message?.conversation ??
@@ -87,12 +88,19 @@ export async function POST(req: Request) {
       },
     });
 
+    // Busca foto de perfil se não tiver ainda
+    let profilePicture = avatarUrl;
+    if (!profilePicture) {
+      profilePicture = await evolutionGetProfilePicture(phone);
+    }
+
     if (lead) {
       lead = await prisma.lead.update({
         where: { id: lead.id },
         data: {
           lastMessageAt: new Date(),
           ...(pushName && { pushName }),
+          ...(profilePicture && !lead.avatarUrl && { avatarUrl: profilePicture }),
         },
       });
     } else {
@@ -101,6 +109,7 @@ export async function POST(req: Request) {
           organizationId,
           phone,
           pushName: pushName || null,
+          avatarUrl: profilePicture || null,
           status: "NOVO",
           ownerType: "bot",
           lastMessageAt: new Date(),

@@ -20,6 +20,9 @@ import {
   Bot,
   CheckCircle,
   AlertCircle,
+  Copy,
+  Check,
+  Link,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -31,6 +34,7 @@ interface SettingsFormProps {
     webhookSecret: string;
     openaiApiKey: string;
     systemPrompt: string;
+    asaasWebhookUrl: string;
   };
   defaultSystemPrompt: string;
 }
@@ -39,6 +43,17 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
   const [formData, setFormData] = useState(settings);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const webhookUrl = typeof window !== "undefined" 
+    ? `${window.location.origin}/api/webhooks/evolution`
+    : "/api/webhooks/evolution";
+
+  async function copyWebhookUrl() {
+    await navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,18 +97,22 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
       )}
 
       <Tabs defaultValue="evolution" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="evolution" className="flex items-center gap-2">
             <Wifi className="h-4 w-4" />
-            Evolution API
+            Evolution
           </TabsTrigger>
           <TabsTrigger value="openai" className="flex items-center gap-2">
             <Key className="h-4 w-4" />
             OpenAI
           </TabsTrigger>
+          <TabsTrigger value="integrations" className="flex items-center gap-2">
+            <Link className="h-4 w-4" />
+            Integrações
+          </TabsTrigger>
           <TabsTrigger value="prompt" className="flex items-center gap-2">
             <Bot className="h-4 w-4" />
-            System Prompt
+            Prompt
           </TabsTrigger>
         </TabsList>
 
@@ -144,6 +163,32 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
                   placeholder="••••••••••••••••"
                 />
               </div>
+
+              <div className="space-y-2 pt-4 border-t">
+                <Label>URL do Webhook (Evolution API)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={webhookUrl}
+                    readOnly
+                    className="bg-gray-50 font-mono text-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={copyWebhookUrl}
+                    className="shrink-0"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Configure esta URL no webhook da Evolution API para receber mensagens
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -177,6 +222,39 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
                     platform.openai.com
                   </a>
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-4 pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Integração com Asaas</CardTitle>
+              <CardDescription>
+                Configure o webhook do Asaas para monitorar pagamentos
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="asaasWebhookUrl">URL do Webhook Asaas</Label>
+                <Input
+                  id="asaasWebhookUrl"
+                  value={formData.asaasWebhookUrl}
+                  onChange={(e) => handleChange("asaasWebhookUrl", e.target.value)}
+                  placeholder="https://seu-app.replit.dev/api/asaas/webhook"
+                />
+                <p className="text-xs text-gray-500">
+                  Configure esta URL nas configurações de webhook do Asaas
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <p className="text-sm font-medium text-gray-700">Eventos monitorados:</p>
+                <ul className="text-xs text-gray-600 space-y-1">
+                  <li>✅ <strong>PAYMENT_CONFIRMED</strong> - Marca lead como FECHADO</li>
+                  <li>✅ <strong>PAYMENT_RECEIVED</strong> - Marca lead como FECHADO</li>
+                  <li>⚠️ <strong>PAYMENT_OVERDUE</strong> - Envia lembrete ao lead</li>
+                </ul>
               </div>
             </CardContent>
           </Card>

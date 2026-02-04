@@ -19,6 +19,7 @@ export default async function ChatsPage() {
     id: c.id,
     name: c.lead.name,
     pushName: c.lead.pushName,
+    avatarUrl: c.lead.avatarUrl,
     phone: c.lead.phone,
     status: c.lead.status,
     ownerType: c.lead.ownerType as "bot" | "human",

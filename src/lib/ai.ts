@@ -8,7 +8,7 @@
 import OpenAI from "openai";
 import { prisma } from "./prisma";
 import { getSystemSettings } from "./settings";
-import { searchKnowledge, formatKnowledgeForAI } from "./knowledge";
+import { getAllKnowledge, searchKnowledge, formatKnowledgeForAI } from "./knowledge";
 import { getAllMemories, formatMemoriesForAI, extractAndSaveMemories } from "./memory";
 
 async function getOpenAIClient() {
@@ -51,42 +51,10 @@ OBJETIVO:
 - Ajudar o lead a escolher o plano ideal
 - SEMPRE pergunte o nome do lead se ainda não souber
 
-PLANOS DISPONÍVEIS (Tool Information):
-1. **Plano Essencial** - R$ 37,90/mês
-   - Consultas com clínico geral
-   - Check-up básico anual (182 exames)
-   - Descontos em farmácias parceiras
-
-2. **Plano Completo** - R$ 59,90/mês  
-   - Tudo do Essencial +
-   - Consultas com especialistas
-   - Check-up completo (1.000 exames)
-   - Telemedicina 24h
-
-3. **Plano Premium** - R$ 99,90/mês
-   - Tudo do Completo +
-   - Check-up premium (5.000 exames)
-   - Dependentes inclusos (até 4)
-   - Descontos em academias
-
-REGRAS IMPORTANTES:
-- Não cobre urgência/emergência/hospital (foque em rotina e prevenção)
-- Carência: 30 dias para consultas, 90 dias para exames
-- Permanência mínima: 12 meses
-- Pagamento: Pix ou cartão de crédito
-- Pessoas 60+ podem aderir, sem restrição
-
-LINKS:
-- Benefícios: https://amovidas.com.br/beneficios
-- Checkout Essencial: https://amovidas.com.br/assinar/essencial
-- Checkout Completo: https://amovidas.com.br/assinar/completo
-- Checkout Premium: https://amovidas.com.br/assinar/premium
-
-CRITÉRIO DE QUALIFICAÇÃO:
-O lead é QUALIFICADO quando perguntar sobre:
-- Planos, valores, check-ups, exames, consultas
-- Especialidades, dependentes, como assinar
-- Regras, carência, permanência
+INFORMAÇÕES SOBRE PLANOS, VALORES E REGRAS:
+Use EXCLUSIVAMENTE as informações fornecidas em <Tool Information>.
+NUNCA invente planos, valores, check-ups ou qualquer outra informação.
+Se uma informação não estiver na Tool Information, diga: "Não tenho essa informação no momento."
 
 FLUXO DE CONVERSA:
 1. Se não souber o nome: "Como posso te chamar?"
@@ -94,14 +62,12 @@ FLUXO DE CONVERSA:
    - "O foco é cuidado de rotina ou exames mais específicos?"
    - "É para você ou vai incluir dependentes?"
    - "Tem alguém com mais de 60 anos?"
-3. Recomende 1 plano com 2-3 benefícios principais
+3. Recomende 1 plano com 2-3 benefícios principais (baseado na Tool Information)
 4. Ofereça o link de benefícios e/ou checkout
 
-SE NÃO SOUBER UMA INFORMAÇÃO:
-Diga: "Não tenho essa informação no momento." e ofereça alternativa.
-
 IMPORTANTE:
-- Nunca invente informações
+- Use APENAS dados da <Tool Information>
+- NUNCA invente informações
 - Se o lead pedir humano, confirme que vai transferir
 - Mantenha tom conversacional e natural`;
 
@@ -120,12 +86,28 @@ export async function generateAIResponse(
       return { response: generateFallbackResponse(userMessage, context.leadName) };
     }
 
-    // Usa prompt do banco ou o padrão
+    // Usa prompt do banco (/settings) ou o padrão
     const systemPrompt = settings.systemPrompt || DEFAULT_SYSTEM_PROMPT;
 
-    // Busca conhecimentos relevantes (Tool Information)
-    const relevantKnowledge = await searchKnowledge(userMessage, undefined, 5);
-    const toolInformation = formatKnowledgeForAI(relevantKnowledge);
+    // Busca conhecimentos da base (Tool Information)
+    // Na primeira mensagem: carrega todos para a Vi conhecer o produto
+    // Nas demais: busca apenas o relevante para a pergunta atual
+    const isFirstMessage = context.messageHistory.length === 0;
+    
+    let knowledge;
+    if (isFirstMessage) {
+      // Primeira mensagem: carrega tudo para apresentação
+      knowledge = await getAllKnowledge(undefined, 100);
+    } else {
+      // Mensagens seguintes: busca seletiva baseada na pergunta
+      knowledge = await searchKnowledge(userMessage, undefined, 15);
+      
+      // Se não encontrou muito, busca mais geral
+      if (knowledge.length < 5) {
+        knowledge = await getAllKnowledge(undefined, 20);
+      }
+    }
+    const toolInformation = formatKnowledgeForAI(knowledge);
 
     // Busca memórias do lead
     const leadMemories = await getAllMemories(context.leadId);
@@ -176,8 +158,13 @@ export async function generateAIResponse(
       });
     }
 
-    // Adiciona contexto do lead
-    if (context.leadName) {
+    // Adiciona contexto do lead (usa isFirstMessage já definida acima)
+    if (isFirstMessage) {
+      messages.push({
+        role: "system",
+        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se: "Olá! Eu sou a Vi, consultora de saúde do Amo Vidas 💜" e pergunte o nome dele de forma natural.`,
+      });
+    } else if (context.leadName) {
       messages.push({
         role: "system",
         content: `O nome do cliente é: ${context.leadName}`,

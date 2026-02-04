@@ -11,12 +11,13 @@ import { cn } from "@/lib/utils";
 import { Search, Pin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface ChatItem {
   id: string;
   name: string | null;
   pushName: string | null;
+  avatarUrl: string | null;
   phone: string;
   status: string;
   ownerType: "bot" | "human";
@@ -47,14 +48,37 @@ function getStatusBadge(status: string, ownerType: string) {
   return statusMap[status] || { label: status, className: "bg-gray-100 text-gray-700" };
 }
 
-export function ChatList({ chats }: ChatListProps) {
+const POLLING_INTERVAL = 5000;
+
+export function ChatList({ chats: initialChats }: ChatListProps) {
   const pathname = usePathname();
   const [search, setSearch] = useState("");
+  const [chats, setChats] = useState<ChatItem[]>(initialChats);
+
+  const fetchChats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/conversations");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversations) {
+          setChats(data.conversations);
+        }
+      }
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(fetchChats, POLLING_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchChats]);
 
   const filteredChats = chats.filter((chat) => {
     const searchLower = search.toLowerCase();
     return (
       chat.name?.toLowerCase().includes(searchLower) ||
+      chat.pushName?.toLowerCase().includes(searchLower) ||
       chat.phone.includes(search)
     );
   });
@@ -135,9 +159,17 @@ function ChatListItem({ chat, isActive }: { chat: ChatItem; isActive: boolean })
         )}
       >
         <div className="relative">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white font-medium text-sm">
-            {(chat.name || chat.pushName)?.[0]?.toUpperCase() || chat.phone.slice(-2)}
-          </div>
+          {chat.avatarUrl ? (
+            <img 
+              src={chat.avatarUrl} 
+              alt=""
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white font-medium text-sm">
+              {(chat.name || chat.pushName)?.[0]?.toUpperCase() || chat.phone.slice(-2)}
+            </div>
+          )}
           <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
         </div>
 
@@ -151,7 +183,11 @@ function ChatListItem({ chat, isActive }: { chat: ChatItem; isActive: boolean })
             </Badge>
           </div>
           <p className="text-xs text-gray-500 truncate mt-0.5">
-            {chat.ownerType === "human" ? "👤 Em atendimento" : "🤖 Aguardando atendimento"}
+            {chat.ownerType === "human" 
+              ? "👤 Atendimento Humano" 
+              : chat.status === "HUMANO_SOLICITADO" 
+                ? "⏳ Aguardando Humano"
+                : "🤖 Atendimento Bot"}
           </p>
         </div>
 

@@ -220,19 +220,19 @@ export async function extractAndSaveMemories(
     extractedName = name;
   }
 
-  // Detecta interesse em planos
+  // Detecta interesse em planos (Amo Vidas)
   if (
     lowerMessage.includes("plano") ||
-    lowerMessage.includes("essencial") ||
-    lowerMessage.includes("completo") ||
-    lowerMessage.includes("premium")
+    lowerMessage.includes("rotina") ||
+    lowerMessage.includes("especializado") ||
+    lowerMessage.includes("cobertura total")
   ) {
-    if (lowerMessage.includes("essencial")) {
-      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Essencial");
-    } else if (lowerMessage.includes("completo")) {
-      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Completo");
-    } else if (lowerMessage.includes("premium")) {
-      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Premium");
+    if (lowerMessage.includes("rotina") || lowerMessage.includes("básico") || lowerMessage.includes("basico")) {
+      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Plano Rotina - R$ 37,90/mês");
+    } else if (lowerMessage.includes("especializado")) {
+      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Plano Especializado - R$ 57,90/mês");
+    } else if (lowerMessage.includes("cobertura total") || lowerMessage.includes("completo")) {
+      await saveMemory(leadId, MEMORY_TYPES.INTEREST, MEMORY_KEYS.PLANO_INTERESSE, "Plano Cobertura Total - R$ 97,00/mês");
     }
   }
 
