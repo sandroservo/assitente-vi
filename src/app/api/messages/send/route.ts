@@ -30,7 +30,15 @@ export async function POST(req: Request) {
       );
     }
 
-    await evolutionSendText({ number: convo.lead.phone, text });
+    try {
+      await evolutionSendText({ number: convo.lead.phone, text });
+    } catch (evolutionError) {
+      console.error("Evolution API error:", evolutionError);
+      return NextResponse.json(
+        { ok: false, error: "Erro ao enviar mensagem via WhatsApp" },
+        { status: 500 }
+      );
+    }
 
     const msg = await prisma.message.create({
       data: {
