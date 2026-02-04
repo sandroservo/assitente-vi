@@ -48,7 +48,7 @@ export async function GET(
 
     return NextResponse.json({
       ok: true,
-      messages: conversation.messages.map((m) => ({
+      messages: conversation.messages.map((m: typeof conversation.messages[number]) => ({
         id: m.id,
         body: m.body ?? "",
         direction: m.direction,

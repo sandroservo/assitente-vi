@@ -34,7 +34,7 @@ export default async function UsersPage() {
     },
   });
 
-  const users = usersData.map((u) => ({
+  const users = usersData.map((u: typeof usersData[number]) => ({
     ...u,
     lastLoginAt: u.lastLoginAt?.toISOString() || null,
     createdAt: u.createdAt.toISOString(),

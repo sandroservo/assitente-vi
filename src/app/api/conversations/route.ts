@@ -18,7 +18,7 @@ export async function GET() {
       take: 100,
     });
 
-    const conversations = convos.map((c) => ({
+    const conversations = convos.map((c: typeof convos[number]) => ({
       id: c.id,
       name: c.lead.name,
       pushName: c.lead.pushName,

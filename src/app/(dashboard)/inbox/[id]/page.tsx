@@ -115,7 +115,7 @@ export default async function ChatPage({
                 Nenhuma mensagem ainda
               </p>
             )}
-            {convo.messages.map((m) => (
+            {convo.messages.map((m: typeof convo.messages[number]) => (
               <div
                 key={m.id}
                 className={`flex ${

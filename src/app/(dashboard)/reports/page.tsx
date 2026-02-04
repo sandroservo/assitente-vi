@@ -89,7 +89,7 @@ export default async function ReportsPage() {
 
   const stats = {
     totalLeads: leadsByStatus.reduce((acc, curr) => acc + curr._count, 0),
-    leadsByStatus: leadsByStatus.map((l) => ({
+    leadsByStatus: leadsByStatus.map((l: typeof leadsByStatus[number]) => ({
       status: l.status,
       count: l._count,
     })),

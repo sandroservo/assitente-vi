@@ -37,7 +37,7 @@ export default async function InboxPage() {
           </Card>
         )}
 
-        {convos.map((c) => (
+        {convos.map((c: typeof convos[number]) => (
           <Link key={c.id} href={`/inbox/${c.id}`}>
             <Card className="hover:bg-accent transition-colors cursor-pointer h-full">
               <CardHeader className="pb-2">
