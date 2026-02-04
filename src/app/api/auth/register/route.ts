@@ -4,8 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { prisma, TransactionClient } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 function generateSlug(name: string): string {
@@ -62,7 +61,7 @@ export async function POST(req: Request) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await prisma.$transaction(async (tx: TransactionClient) => {
       const organization = await tx.organization.create({
         data: {
           name: organizationName,
