@@ -70,7 +70,7 @@ export default async function ChatDetailPage({
     notes: currentConversation.lead.notes,
   };
 
-  const messages = currentConversation.messages.map((m) => ({
+  const messages = currentConversation.messages.map((m: typeof currentConversation.messages[number]) => ({
     id: m.id,
     body: m.body || "",
     direction: m.direction as "in" | "out",
