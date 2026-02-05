@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrganizationSettings } from "@/lib/session";
+import { getSystemSettings } from "@/lib/settings";
 
 export async function POST(
   req: Request,
@@ -47,7 +48,9 @@ export async function POST(
 
     // Cria instância na Evolution API se não existir
     const createUrl = `${baseUrl.replace(/\/api\/?$/, "")}/instance/create`;
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://seu-dominio.com"}/api/webhooks/evolution`;
+    const globalSettings = await getSystemSettings();
+    const appBase = globalSettings.appUrl || process.env.NEXT_PUBLIC_APP_URL || "";
+    const webhookUrl = appBase ? `${appBase.replace(/\/$/, "")}/api/webhooks/evolution` : `${process.env.NEXT_PUBLIC_APP_URL || "https://seu-dominio.com"}/api/webhooks/evolution`;
 
     try {
       const createRes = await fetch(createUrl, {

@@ -42,11 +42,12 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  users       User[]
-  instances   Instance[]
-  leads       Lead[]
-  knowledge   Knowledge[]
-  settings    OrgSettings[]
+  users            User[]
+  instances        Instance[]
+  leads            Lead[]
+  knowledge        Knowledge[]
+  settings         OrgSettings[]
+  excludedContacts ExcludedContact[]
 }
 
 model User {
@@ -102,6 +103,20 @@ model OrgSettings {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, key])
+  @@index([organizationId])
+}
+
+// Lista de exceção: números (ex.: da empresa) para a Vi NÃO responder
+model ExcludedContact {
+  id             String   @id @default(cuid())
+  organizationId String
+  phone          String   // número normalizado (apenas dígitos)
+  name           String?  // rótulo opcional, ex.: "João - Comercial"
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, phone])
   @@index([organizationId])
 }
 

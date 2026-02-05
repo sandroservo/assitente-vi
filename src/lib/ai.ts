@@ -37,6 +37,31 @@ interface ConversationContext {
   messageHistory: { direction: "in" | "out"; body: string | null }[];
 }
 
+/**
+ * Retorna o período do dia no fuso do Brasil (America/Sao_Paulo) para a Vi usar saudação adequada
+ */
+function getPeriodoDoDia(): { periodo: string; saudacao: string; horaFormatada: string } {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const horaFormatada = formatter.format(now);
+  const hour = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
+
+  if (hour >= 0 && hour < 6) {
+    return { periodo: "madrugada", saudacao: "Boa madrugada", horaFormatada };
+  }
+  if (hour >= 6 && hour < 12) {
+    return { periodo: "manhã", saudacao: "Bom dia", horaFormatada };
+  }
+  if (hour >= 12 && hour < 18) {
+    return { periodo: "tarde", saudacao: "Boa tarde", horaFormatada };
+  }
+  return { periodo: "noite", saudacao: "Boa noite", horaFormatada };
+}
+
 const DEFAULT_SYSTEM_PROMPT = `Você é a Vi, consultora de saúde do Clube Amo Vidas. Você fala por WhatsApp com leads que podem virar clientes.
 
 CONVERSA NATURAL (PRIORIDADE MÁXIMA):
@@ -55,8 +80,13 @@ REGRAS DE CONTEÚDO:
 - Use EXCLUSIVAMENTE o que está em <Tool Information>. NUNCA invente dados (valores, regras, prazos).
 - Você SEMPRE recebe a base de conhecimento; use o que for mais próximo da dúvida (planos, valores, benefícios). Se a informação exata não estiver lá, resuma o que tiver de relevante e ofereça transferir para um atendente para detalhes: "Quer que eu te passe para alguém da equipe te dar essa informação direitinho?"
 - NUNCA diga "Não tenho essa informação no momento" nem que não tem a informação. Prefira usar algo da base + oferecer atendente humano.
+- Antes de citar preço ou enviar link: confira se está na Tool Information. Só envie links que existam nela. Se houver mais de um valor (ex.: 37,00 e 37,90), use o principal e pode oferecer o link oficial para confirmar.
 - Respostas curtas (3–4 frases). Uma pergunta por vez quando for perguntar.
-- Se pedir atendente humano, confirme que vai transferir. Se não souber o nome, pergunte de forma natural.`;
+- Se pedir atendente humano, confirme que vai transferir. Se não souber o nome, pergunte de forma natural.
+
+TRIAGEM (use quando for direcionar o lead ao plano ideal; não como script rígido):
+- Entender necessidade: rotina ou exames mais específicos? Só a pessoa ou dependentes? Alguém com 60+? Preferência por economia mensal ou mais cobertura?
+- Recomende um plano com base nas respostas e na Tool Information; cite preço só se estiver lá e ofereça link de benefícios ou checkout se existir na base.`;
 
 export { DEFAULT_SYSTEM_PROMPT };
 
@@ -144,11 +174,18 @@ export async function generateAIResponse(
       });
     }
 
+    // Contexto de horário (Brasil): Vi sabe se é dia, tarde, noite ou madrugada
+    const { periodo, saudacao, horaFormatada } = getPeriodoDoDia();
+    messages.push({
+      role: "system",
+      content: `Agora são ${horaFormatada} (horário de Brasília). Período: ${periodo}. Use a saudação adequada quando for começar ou cumprimentar: ${saudacao}. Seja natural com o horário (ex.: de madrugada pode ser mais breve; de manhã/tarde/noite use o cumprimento correto).`,
+    });
+
     // Adiciona contexto do lead (usa isFirstMessage já definida acima)
     if (isFirstMessage) {
       messages.push({
         role: "system",
-        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se de forma breve e calorosa (ex.: "Oi! Sou a Vi, consultora do Amo Vidas 💜") e pergunte o nome de forma natural, como uma pessoa real no WhatsApp. Não use texto de script.`,
+        content: `Esta é a PRIMEIRA mensagem do cliente. Apresente-se de forma breve e calorosa (ex.: "${saudacao}! Sou a Vi, consultora do Amo Vidas 💜") e pergunte o nome de forma natural, como uma pessoa real no WhatsApp. Não use texto de script.`,
       });
     } else if (context.leadName) {
       messages.push({
@@ -176,8 +213,9 @@ export async function generateAIResponse(
     // Adiciona a mensagem atual
     messages.push({ role: "user", content: userMessage });
 
+    const model = settings.openaiModel || "gpt-4o-mini";
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages,
       max_tokens: 350,
       temperature: 0.85,
@@ -261,16 +299,12 @@ async function updateLeadData(
   data: { name?: string; email?: string }
 ) {
   try {
-    const updateData: { name?: string; email?: string; status?: "QUALIFICADO" } = {};
+    const updateData: { name?: string; email?: string } = {};
 
     if (data.name) updateData.name = data.name;
     if (data.email) updateData.email = data.email;
 
-    // Se temos nome ou email, qualifica o lead
-    if (data.name || data.email) {
-      updateData.status = "QUALIFICADO";
-    }
-
+    // Atualiza apenas nome/email; status segue o fluxo NOVO → EM_ATENDIMENTO → QUALIFICADO
     if (Object.keys(updateData).length > 0) {
       await prisma.lead.update({
         where: { id: leadId },
@@ -401,7 +435,12 @@ export function detectLeadStatus(
     return "FECHADO";
   }
 
-  // QUALIFICADO - Sinais de interesse real
+  // EM_ATENDIMENTO - Primeiro: lead que trocou mensagens sai de NOVO
+  if (currentStatus === "NOVO" && messageHistory.length >= 2) {
+    return "EM_ATENDIMENTO";
+  }
+
+  // QUALIFICADO - Sinais de interesse real (só depois de estar em atendimento ou já qualificado)
   const qualifiedKeywords = [
     "quanto custa",
     "qual o preço",
@@ -424,8 +463,12 @@ export function detectLeadStatus(
     "formas de pagamento",
     "como pago",
   ];
-  if (qualifiedKeywords.some((k) => combined.includes(k)) && currentStatus !== "FECHADO") {
-    return "QUALIFICADO";
+  const hasQualifiedSignal = qualifiedKeywords.some((k) => combined.includes(k));
+  if (hasQualifiedSignal && currentStatus !== "FECHADO") {
+    // Só vai para QUALIFICADO se já estiver EM_ATENDIMENTO (ou já qualificado/fechado)
+    if (currentStatus === "EM_ATENDIMENTO" || currentStatus === "QUALIFICADO" || currentStatus === "PROPOSTA_ENVIADA" || currentStatus === "EM_NEGOCIACAO" || currentStatus === "AGUARDANDO_RESPOSTA") {
+      return "QUALIFICADO";
+    }
   }
 
   // LEAD_FRIO - Sinais de lead esfriando
@@ -450,11 +493,6 @@ export function detectLeadStatus(
   ];
   if (coldKeywords.some((k) => msg.includes(k))) {
     return "LEAD_FRIO";
-  }
-
-  // EM_ATENDIMENTO - Lead está engajado na conversa
-  if (currentStatus === "NOVO" && messageHistory.length >= 2) {
-    return "EM_ATENDIMENTO";
   }
 
   return null; // Mantém o status atual

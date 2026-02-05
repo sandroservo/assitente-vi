@@ -65,18 +65,25 @@ const CATEGORY_LABELS: Record<string, string> = {
   atendimento: "🏥 Atendimento",
   links: "🔗 Links",
   pagamento: "💳 Pagamento",
+  carencia: "⏳ Carência",
+  locais: "📍 Locais",
   faq: "❓ FAQ",
 };
 
+// Cores suaves e agradáveis: fundo pastel + texto escuro
 const CATEGORY_COLORS: Record<string, string> = {
-  planos: "bg-blue-100 text-blue-700",
-  "check-ups": "bg-green-100 text-green-700",
-  regras: "bg-red-100 text-red-700",
-  atendimento: "bg-purple-100 text-purple-700",
-  links: "bg-orange-100 text-orange-700",
-  pagamento: "bg-yellow-100 text-yellow-700",
-  faq: "bg-gray-100 text-gray-700",
+  planos: "bg-sky-200 text-sky-800 border border-sky-300/50",
+  "check-ups": "bg-emerald-200 text-emerald-800 border border-emerald-300/50",
+  regras: "bg-rose-200 text-rose-800 border border-rose-300/50",
+  atendimento: "bg-violet-200 text-violet-800 border border-violet-300/50",
+  links: "bg-amber-200 text-amber-800 border border-amber-300/50",
+  pagamento: "bg-yellow-100 text-amber-800 border border-amber-200/50",
+  carencia: "bg-slate-200 text-slate-700 border border-slate-300/50",
+  locais: "bg-teal-200 text-teal-800 border border-teal-300/50",
+  faq: "bg-indigo-100 text-indigo-800 border border-indigo-200/50",
 };
+
+const BADGE_FALLBACK = "bg-slate-200 text-slate-700 border border-slate-300/50";
 
 export function KnowledgeManager({ initialItems, categories }: Props) {
   const [items, setItems] = useState<KnowledgeItem[]>(initialItems);
@@ -371,7 +378,7 @@ export function KnowledgeManager({ initialItems, categories }: Props) {
             >
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-3">
-                  <Badge className={CATEGORY_COLORS[category] || "bg-gray-100"}>
+                  <Badge className={CATEGORY_COLORS[category] || BADGE_FALLBACK}>
                     {CATEGORY_LABELS[category] || category}
                   </Badge>
                   <span className="text-sm text-gray-500">

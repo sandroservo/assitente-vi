@@ -85,5 +85,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 dias
   },
-  secret: process.env.NEXTAUTH_SECRET || "secretaria-vi-secret-key-change-in-production",
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "secretaria-vi-secret-key-change-in-production",
+  trustHost: true, // necessário em produção (proxy/reverse proxy) para confiar no Host
 });

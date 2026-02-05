@@ -16,15 +16,21 @@ import { auth } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ ok: false, error: "Não autorizado" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
     const category = searchParams.get("category");
+    const organizationId = session.user.organizationId;
 
     let knowledge;
     if (query) {
-      knowledge = await searchKnowledge(query, category || undefined, 20);
+      knowledge = await searchKnowledge(query, category || undefined, 20, organizationId);
     } else {
-      knowledge = await getAllKnowledge(category || undefined, 50);
+      knowledge = await getAllKnowledge(category || undefined, 50, organizationId);
     }
 
     return NextResponse.json({

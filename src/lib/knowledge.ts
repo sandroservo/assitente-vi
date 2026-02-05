@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 
 export interface KnowledgeItem {
   id: string;
+  organizationId: string;
   category: string;
   title: string;
   content: string;

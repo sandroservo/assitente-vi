@@ -13,8 +13,10 @@ export interface SystemSettings {
   evolutionToken: string;
   webhookSecret: string;
   openaiApiKey: string;
+  openaiModel: string;
   systemPrompt: string;
   asaasWebhookUrl: string;
+  appUrl: string;
 }
 
 const SETTINGS_KEYS = {
@@ -23,8 +25,10 @@ const SETTINGS_KEYS = {
   EVOLUTION_TOKEN: "evolution_token",
   WEBHOOK_SECRET: "webhook_secret",
   OPENAI_API_KEY: "openai_api_key",
+  OPENAI_MODEL: "openai_model",
   SYSTEM_PROMPT: "system_prompt",
   ASAAS_WEBHOOK_URL: "asaas_webhook_url",
+  APP_URL: "app_url",
 };
 
 export async function getSetting(key: string): Promise<string | null> {
@@ -71,11 +75,18 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       map.get(SETTINGS_KEYS.OPENAI_API_KEY) ||
       process.env.OPENAI_API_KEY ||
       "",
+    openaiModel:
+      map.get(SETTINGS_KEYS.OPENAI_MODEL) ||
+      "gpt-4o-mini",
     systemPrompt:
       map.get(SETTINGS_KEYS.SYSTEM_PROMPT) ||
       "",
     asaasWebhookUrl:
       map.get(SETTINGS_KEYS.ASAAS_WEBHOOK_URL) ||
+      "",
+    appUrl:
+      map.get(SETTINGS_KEYS.APP_URL) ||
+      process.env.NEXT_PUBLIC_APP_URL ||
       "",
   };
 }
@@ -120,6 +131,13 @@ export async function saveSystemSettings(
       encrypted: true,
     });
   }
+  if (settings.openaiModel !== undefined) {
+    updates.push({
+      key: SETTINGS_KEYS.OPENAI_MODEL,
+      value: settings.openaiModel,
+      encrypted: false,
+    });
+  }
   if (settings.systemPrompt !== undefined) {
     updates.push({
       key: SETTINGS_KEYS.SYSTEM_PROMPT,
@@ -131,6 +149,13 @@ export async function saveSystemSettings(
     updates.push({
       key: SETTINGS_KEYS.ASAAS_WEBHOOK_URL,
       value: settings.asaasWebhookUrl,
+      encrypted: false,
+    });
+  }
+  if (settings.appUrl !== undefined) {
+    updates.push({
+      key: SETTINGS_KEYS.APP_URL,
+      value: settings.appUrl,
       encrypted: false,
     });
   }

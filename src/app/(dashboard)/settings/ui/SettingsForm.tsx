@@ -23,8 +23,10 @@ import {
   Copy,
   Check,
   Link,
+  UserMinus,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ExcludedContactsCard } from "./ExcludedContactsCard";
 
 const WEBHOOK_PATH = "/api/asaas/webhook";
 
@@ -81,8 +83,10 @@ interface SettingsFormProps {
     evolutionToken: string;
     webhookSecret: string;
     openaiApiKey: string;
+    openaiModel: string;
     systemPrompt: string;
     asaasWebhookUrl: string;
+    appUrl: string;
   };
   defaultSystemPrompt: string;
 }
@@ -93,12 +97,12 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const webhookUrl = typeof window !== "undefined" 
-    ? `${window.location.origin}/api/webhooks/evolution`
-    : "/api/webhooks/evolution";
+  const baseUrl = formData.appUrl || (typeof window !== "undefined" ? window.location.origin : "");
+  const webhookUrlDisplay = baseUrl ? `${baseUrl.replace(/\/$/, "")}/api/webhooks/evolution` : "";
 
   async function copyWebhookUrl() {
-    await navigator.clipboard.writeText(webhookUrl);
+    const url = webhookUrlDisplay || (typeof window !== "undefined" ? `${window.location.origin}/api/webhooks/evolution` : "");
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -145,7 +149,11 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
       )}
 
       <Tabs defaultValue="evolution" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <Link className="h-4 w-4" />
+            Geral
+          </TabsTrigger>
           <TabsTrigger value="evolution" className="flex items-center gap-2">
             <Wifi className="h-4 w-4" />
             Evolution
@@ -158,11 +166,40 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
             <Link className="h-4 w-4" />
             Integrações
           </TabsTrigger>
+          <TabsTrigger value="exceptions" className="flex items-center gap-2">
+            <UserMinus className="h-4 w-4" />
+            Exceções
+          </TabsTrigger>
           <TabsTrigger value="prompt" className="flex items-center gap-2">
             <Bot className="h-4 w-4" />
             Prompt
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="general" className="space-y-4 pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações gerais</CardTitle>
+              <CardDescription>
+                URL da aplicação usada em webhooks e links (Evolution, Asaas, etc.)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="appUrl">URL da aplicação</Label>
+                <Input
+                  id="appUrl"
+                  value={formData.appUrl}
+                  onChange={(e) => handleChange("appUrl", e.target.value)}
+                  placeholder="https://vi.amovidas.com.br"
+                />
+                <p className="text-xs text-gray-500">
+                  Deve ser a URL pública do painel (ex.: https://vi.amovidas.com.br). Usada ao registrar o webhook na Evolution e em outros integradores.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="evolution" className="space-y-4 pt-4">
           <Card>
@@ -215,11 +252,11 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
               <div className="space-y-2 pt-4 border-t">
                 <Label>URL do Webhook (Evolution API)</Label>
                 <div className="flex gap-2">
-                  <Input
-                    value={webhookUrl}
-                    readOnly
-                    className="bg-gray-50 font-mono text-sm"
-                  />
+                <Input
+                  value={webhookUrlDisplay || "Configure a URL da aplicação na aba Geral"}
+                  readOnly
+                  className="bg-gray-50 font-mono text-sm"
+                />
                   <Button
                     type="button"
                     variant="outline"
@@ -271,8 +308,24 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
                   </a>
                 </p>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="openaiModel">Modelo</Label>
+                <Input
+                  id="openaiModel"
+                  value={formData.openaiModel}
+                  onChange={(e) => handleChange("openaiModel", e.target.value)}
+                  placeholder="gpt-4o-mini"
+                />
+                <p className="text-xs text-gray-500">
+                  Modelo usado pela Vi (ex.: gpt-4o-mini, gpt-4o). Deixe em branco para usar gpt-4o-mini.
+                </p>
+              </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="exceptions" className="space-y-4 pt-4">
+          <ExcludedContactsCard />
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4 pt-4">

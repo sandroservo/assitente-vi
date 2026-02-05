@@ -170,6 +170,47 @@ function sleep(ms: number): Promise<void> {
 /**
  * Busca a foto de perfil de um contato no WhatsApp
  */
+/**
+ * Obtém mídia (áudio, imagem, etc.) de uma mensagem em base64.
+ * Usado para transcrição de áudio (Whisper) e descrição de imagem (Vision).
+ * @param instanceName Nome da instância Evolution (ex.: payload.instance)
+ * @param messageKeyId ID da mensagem (ex.: payload.data.key.id)
+ * @returns Objeto com base64 e opcionalmente mimeType, ou null se falhar
+ */
+export async function evolutionGetMediaBase64(
+  instanceName: string,
+  messageKeyId: string
+): Promise<{ base64: string; mimeType?: string } | null> {
+  const { baseUrl, token } = await getEvolutionConfig();
+  if (!baseUrl || !token) return null;
+
+  const url = `${baseUrl.replace(/\/api\/?$/, "")}/chat/getBase64FromMediaMessage/${instanceName}`;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: token,
+      },
+      body: JSON.stringify({
+        message: { key: { id: messageKeyId } },
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const base64 = data?.base64 ?? data?.base64Base64 ?? null;
+    if (!base64 || typeof base64 !== "string") return null;
+    return {
+      base64,
+      mimeType: data?.mimetype ?? data?.mimeType ?? undefined,
+    };
+  } catch (error) {
+    console.error("[Evolution] Erro ao obter mídia base64:", error);
+    return null;
+  }
+}
+
 export async function evolutionGetProfilePicture(number: string): Promise<string | null> {
   const { baseUrl, instance, token } = await getEvolutionConfig();
   

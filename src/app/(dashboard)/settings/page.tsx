@@ -23,12 +23,14 @@ export default async function SettingsPage() {
   const settings = await getSystemSettings();
   const defaultSystemPrompt = getDefaultSystemPrompt();
 
-  // Mascara tokens sensíveis para exibição
+  // Mascara tokens sensíveis para exibição; demais vêm do banco
   const maskedSettings = {
     ...settings,
     evolutionToken: settings.evolutionToken ? "••••••••" : "",
     webhookSecret: settings.webhookSecret ? "••••••••" : "",
     openaiApiKey: settings.openaiApiKey ? "••••••••" : "",
+    openaiModel: settings.openaiModel || "gpt-4o-mini",
+    appUrl: settings.appUrl || "",
   };
 
   return (

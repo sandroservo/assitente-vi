@@ -8,7 +8,8 @@
 
 import { NextResponse } from "next/server";
 import { prisma, LeadStatus } from "@/lib/prisma";
-import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture } from "@/lib/evolution";
+import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture, evolutionGetMediaBase64 } from "@/lib/evolution";
+import { transcribeAudio, describeImage } from "@/lib/media";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus } from "@/lib/ai";
 
 function phoneFromJid(remoteJid: string) {
@@ -27,13 +28,36 @@ export async function POST(req: Request) {
 
     const remoteJid: string | undefined = payload?.data?.key?.remoteJid;
     const providerId: string | undefined = payload?.data?.key?.id;
+    const fromMe: boolean = payload?.data?.key?.fromMe === true;
     const pushName: string | undefined = payload?.data?.pushName;
     const instanceName: string | undefined = payload?.instance;
     const avatarUrl: string | undefined = payload?.data?.profilePictureUrl;
 
-    const text: string | undefined =
-      payload?.data?.message?.conversation ??
-      payload?.data?.message?.extendedTextMessage?.text;
+    const msg = payload?.data?.message ?? {};
+    let text: string | undefined =
+      msg?.conversation ?? msg?.extendedTextMessage?.text;
+
+    const messageType: "text" | "audio" | "image" = text != null ? "text" : msg?.audioMessage ? "audio" : msg?.imageMessage ? "image" : "text";
+
+    // Só transcreve/descreve mídia em mensagens recebidas (não as enviadas por nós)
+    if (!fromMe) {
+      if (messageType === "audio" && instanceName && providerId) {
+        const media = await evolutionGetMediaBase64(instanceName, providerId);
+        if (media) {
+          const transcribed = await transcribeAudio(media.base64, media.mimeType);
+          if (transcribed) text = transcribed;
+        }
+        if (!text) text = "[Áudio não transcrito]";
+      } else if (messageType === "image" && instanceName && providerId) {
+        const media = await evolutionGetMediaBase64(instanceName, providerId);
+        const caption = msg?.imageMessage?.caption ?? "";
+        if (media) {
+          const described = await describeImage(media.base64, media.mimeType, caption || undefined);
+          if (described) text = caption ? `${described}\n\nLegenda do usuário: ${caption}` : described;
+        }
+        if (!text) text = caption || "[Imagem sem descrição]";
+      }
+    }
 
     if (!remoteJid) {
       return NextResponse.json(
@@ -129,7 +153,7 @@ export async function POST(req: Request) {
         where: { id: conversation.id },
         data: {
           lastMessageAt: new Date(),
-          unreadCount: { increment: 1 },
+          ...(fromMe ? {} : { unreadCount: { increment: 1 } }),
         },
       });
     } else {
@@ -140,7 +164,7 @@ export async function POST(req: Request) {
           remoteJid,
           channel: "whatsapp",
           lastMessageAt: new Date(),
-          unreadCount: 1,
+          unreadCount: fromMe ? 0 : 1,
         },
       });
     }
@@ -148,17 +172,57 @@ export async function POST(req: Request) {
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
-        direction: "in",
-        type: "text",
+        direction: fromMe ? "out" : "in",
+        type: messageType,
         body: text ?? null,
         providerId: providerId ?? null,
         sentAt: new Date(),
       },
     });
 
+    // Mensagem enviada pelo atendente (fromMe): humano assumiu a conversa — bot não responde até "Devolver ao Bot"
+    if (fromMe) {
+      const wasBot = lead.ownerType === "bot";
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { ownerType: "human", status: "HUMANO_EM_ATENDIMENTO" },
+      });
+      if (wasBot) {
+        await prisma.handoff.create({
+          data: {
+            leadId: lead.id,
+            conversationId: conversation.id,
+            requestedBy: "human",
+            reason: "Atendente enviou mensagem pelo WhatsApp",
+          },
+        });
+      }
+      return NextResponse.json({ ok: true, action: "human_sent" });
+    }
+
+    if (!text?.trim()) {
+      return NextResponse.json({ ok: true, action: "no_text" });
+    }
+
     // Se lead já está com humano, não responde automaticamente
     if (lead.ownerType === "human") {
       return NextResponse.json({ ok: true, action: "human_owner" });
+    }
+
+    // Lista de exceção: números da empresa etc. — Vi não responde
+    const phoneNormalized = phone.replace(/\D/g, "").slice(-11);
+    if (phoneNormalized) {
+      const excluded = await prisma.excludedContact.findUnique({
+        where: {
+          organizationId_phone: {
+            organizationId: lead.organizationId,
+            phone: phoneNormalized,
+          },
+        },
+      });
+      if (excluded) {
+        return NextResponse.json({ ok: true, action: "excluded_contact" });
+      }
     }
 
     // Verifica se pediu transferência para humano

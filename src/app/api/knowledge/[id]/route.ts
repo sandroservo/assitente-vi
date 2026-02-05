@@ -6,26 +6,37 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import {
   getKnowledgeById,
   updateKnowledge,
   deleteKnowledge,
 } from "@/lib/knowledge";
 
+function checkOrg(knowledge: { organizationId: string } | null, organizationId: string) {
+  if (!knowledge || knowledge.organizationId !== organizationId) {
+    return NextResponse.json(
+      { ok: false, error: "Conhecimento não encontrado" },
+      { status: 404 }
+    );
+  }
+  return null;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ ok: false, error: "Não autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
     const knowledge = await getKnowledgeById(id);
-
-    if (!knowledge) {
-      return NextResponse.json(
-        { ok: false, error: "Conhecimento não encontrado" },
-        { status: 404 }
-      );
-    }
+    const orgError = checkOrg(knowledge, session.user.organizationId);
+    if (orgError) return orgError;
 
     return NextResponse.json({ ok: true, knowledge });
   } catch (error) {
@@ -42,9 +53,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await request.json();
+    const session = await auth();
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ ok: false, error: "Não autorizado" }, { status: 401 });
+    }
 
+    const { id } = await params;
+    const existing = await getKnowledgeById(id);
+    const orgError = checkOrg(existing, session.user.organizationId);
+    if (orgError) return orgError;
+
+    const body = await request.json();
     const knowledge = await updateKnowledge(id, {
       category: body.category,
       title: body.title,
@@ -69,7 +88,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.organizationId) {
+      return NextResponse.json({ ok: false, error: "Não autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
+    const existing = await getKnowledgeById(id);
+    const orgError = checkOrg(existing, session.user.organizationId);
+    if (orgError) return orgError;
+
     await deleteKnowledge(id);
 
     return NextResponse.json({ ok: true });
