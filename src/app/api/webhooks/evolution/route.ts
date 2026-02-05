@@ -2,8 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  * 
- * Webhook para receber mensagens do WhatsApp via Evolution API
- * Suporta multitenancy (múltiplas organizações e instâncias)
+ * Webhook para receber mensagens do WhatsApp via Evolution API (single-tenant).
  */
 
 import { NextResponse } from "next/server";
@@ -68,40 +67,22 @@ export async function POST(req: Request) {
 
     const phone = phoneFromJid(remoteJid);
 
-    // Busca a instância pelo nome (multitenancy)
-    let instance = null;
-    let organizationId: string | null = null;
-
-    if (instanceName) {
-      instance = await prisma.instance.findFirst({
-        where: { instanceName },
-        include: { organization: true },
+    // Single-tenant: usa sempre a primeira organização
+    let org = await prisma.organization.findFirst({ orderBy: { name: "asc" } });
+    if (!org) {
+      org = await prisma.organization.create({
+        data: { name: "Amo Vidas", slug: "amovidas" },
       });
-      
-      if (instance) {
-        organizationId = instance.organizationId;
-      }
     }
+    const organizationId = org.id;
 
-    // Se não encontrou instância, busca organização padrão ou cria uma
-    if (!organizationId) {
-      const defaultOrg = await prisma.organization.findFirst({
-        where: { slug: "default" },
-      });
-
-      if (defaultOrg) {
-        organizationId = defaultOrg.id;
-      } else {
-        // Cria organização padrão se não existir
-        const newOrg = await prisma.organization.create({
-          data: {
-            name: "Organização Padrão",
-            slug: "default",
-          },
-        });
-        organizationId = newOrg.id;
-      }
-    }
+    // Instância (opcional): para vincular conversa ao canal
+    let instance = instanceName
+      ? await prisma.instance.findFirst({
+          where: { instanceName, organizationId },
+          include: { organization: true },
+        })
+      : null;
 
     // Busca ou cria lead vinculado à organização
     let lead = await prisma.lead.findFirst({

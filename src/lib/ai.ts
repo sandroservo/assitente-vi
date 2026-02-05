@@ -106,18 +106,16 @@ export async function generateAIResponse(
     // Usa prompt do banco (/settings) ou o padrão
     const systemPrompt = settings.systemPrompt || DEFAULT_SYSTEM_PROMPT;
 
-    // Busca conhecimentos da base (Tool Information) da organização do lead.
-    // Sempre injetamos uma base ampla para a Vi nunca responder "não tenho essa informação".
+    // Base de conhecimento única (single-tenant): busca toda a base, sem filtro de organização.
     const isFirstMessage = context.messageHistory.length === 0;
-    const organizationId = context.organizationId ?? undefined;
 
     let knowledge: Awaited<ReturnType<typeof getAllKnowledge>>;
     if (isFirstMessage) {
-      knowledge = await getAllKnowledge(undefined, 100, organizationId);
+      knowledge = await getAllKnowledge(undefined, 100, undefined);
     } else {
       const [searchResults, baseKnowledge] = await Promise.all([
-        searchKnowledge(userMessage, undefined, 25, organizationId),
-        getAllKnowledge(undefined, 60, organizationId),
+        searchKnowledge(userMessage, undefined, 25, undefined),
+        getAllKnowledge(undefined, 60, undefined),
       ]);
       const byId = new Map(searchResults.map((k) => [k.id, k]));
       baseKnowledge.forEach((k) => byId.set(k.id, k));
@@ -158,11 +156,11 @@ export async function generateAIResponse(
       { role: "system", content: systemPrompt },
     ];
 
-    // Adiciona Tool Information (base de conhecimento)
+    // Adiciona Tool Information (base de conhecimento) — a Vi DEVE consultar para planos, parceiros, preços, etc.
     if (toolInformation) {
       messages.push({
         role: "system",
-        content: toolInformation,
+        content: `${toolInformation}\n\nIMPORTANTE: Use o bloco <Tool Information> acima para responder perguntas sobre planos, preços, parceiros do Clube de Desconto, benefícios, links e regras. Consulte sempre essa base antes de responder.`,
       });
     }
 

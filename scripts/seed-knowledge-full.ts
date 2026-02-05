@@ -519,37 +519,34 @@ Os descontos são exclusivos para membros do Amo Vidas e podem variar conforme o
 ];
 
 /**
- * Seed único: apaga toda a base de conhecimento e insere novamente em todas as organizações.
+ * Seed único: apaga a base de conhecimento e insere na organização (single-tenant).
  * Executar: npx tsx scripts/seed-knowledge-full.ts
  */
 export async function main() {
-  const orgs = await prisma.organization.findMany({ orderBy: { name: "asc" } });
-
-  if (orgs.length === 0) {
-    console.error("Nenhuma organização encontrada. Crie uma organização primeiro.");
-    process.exit(1);
+  let org = await prisma.organization.findFirst({ orderBy: { name: "asc" } });
+  if (!org) {
+    org = await prisma.organization.create({
+      data: { name: "Amo Vidas", slug: "amovidas" },
+    });
+    console.log(`Organização criada: ${org.name} (${org.slug})`);
   }
 
-  console.log(`Apagando base de conhecimento antiga (todas as organizações)...`);
+  console.log(`Apagando base de conhecimento antiga...`);
   await prisma.knowledge.deleteMany({});
 
-  console.log(`Inserindo ${KNOWLEDGE_DATA.length} conhecimentos em ${orgs.length} organização(ões)...\n`);
+  console.log(`Inserindo ${KNOWLEDGE_DATA.length} conhecimentos em ${org.name}...\n`);
 
-  for (const org of orgs) {
-    console.log(`→ ${org.name} (${org.slug})`);
-    for (const item of KNOWLEDGE_DATA) {
-      await prisma.knowledge.create({
-        data: {
-          ...item,
-          organizationId: org.id,
-        },
-      });
-      console.log(`  ✓ [${item.category}] ${item.title}`);
-    }
-    console.log("");
+  for (const item of KNOWLEDGE_DATA) {
+    await prisma.knowledge.create({
+      data: {
+        ...item,
+        organizationId: org.id,
+      },
+    });
+    console.log(`  ✓ [${item.category}] ${item.title}`);
   }
 
-  console.log(`✅ Concluído: ${KNOWLEDGE_DATA.length} conhecimentos × ${orgs.length} org(s).`);
+  console.log(`\n✅ Concluído: ${KNOWLEDGE_DATA.length} conhecimentos.`);
   await prisma.$disconnect();
 }
 
