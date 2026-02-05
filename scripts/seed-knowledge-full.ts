@@ -482,40 +482,75 @@ COBERTURA TOTAL (R$ 97,00):
     keywords: "comparar, diferença, qual plano, melhor plano",
     priority: 9,
   },
+  {
+    category: "faq",
+    title: "Parceiros do Clube de Descontos Amo Vidas",
+    content: `Parceiros do Clube de Desconto: o Amo Vidas possui um Clube de Descontos com parceiros em diversas áreas. Lista de parceiros:
+
+**SAÚDE E CLÍNICAS:**
+- Citoclínica - Consultas e exames (até 40% de desconto)
+- CROI - Centro de Radiologia de Imperatriz - Exames de imagem (até 80%)
+- ICM - Instituto de Cuidado Mental - Psicologia, Psiquiatria e Terapias (até 50%)
+- CLINICA FEMINA - Ginecologia em Imperatriz (até 30%)
+- Neuroclin - Neurodesenvolvimento e Psicologia (até 60%)
+- AGAPE - Psicologia, Psicopedagoga, Nutrição Infantil, Fonoaudióloga (até 40%)
+
+**ODONTOLOGIA:**
+- Dentistas do Trabalhador - Imperatriz (até 50%)
+
+**FARMÁCIAS:**
+- Farmacia Zero Hora - Imperatriz (até 15% referência, até 70% genéricos)
+- Hiper Popular - São Pedro Água Branca (até 50%)
+- Martins Farma - São Pedro Água Branca (até 50%)
+
+**ORTOPEDIA / BEM-ESTAR / ESTÉTICA:**
+- Ortomed - Imperatriz - Produtos ortopédicos (até 50%)
+- Liffe Fitness - Imperatriz - Academia (até 40%)
+- Italo Barber e St. Bryte's Barber Club - Imperatriz - Barbearia (até 30%)
+- AMIVI COSMÉTICOS - Imperatriz - Cosméticos (até 50%)
+
+**TECNOLOGIA:**
+- King Phone - Imperatriz - Celulares e acessórios (até 30%)
+
+Os descontos são exclusivos para membros do Amo Vidas e podem variar conforme o parceiro.`,
+    keywords: "parceiros, parceiros do clube, clube de desconto, quais parceiros, lista de parceiros, farmácia, clínica, odontologia, academia, barbearia, cosméticos, saúde, ortopedia, psicologia, desconto",
+    priority: 9,
+  },
 ];
 
-async function main() {
-  // Busca organização padrão (amovidas)
-  let org = await prisma.organization.findFirst({
-    where: { slug: "amovidas" },
-  });
+/**
+ * Seed único: apaga toda a base de conhecimento e insere novamente em todas as organizações.
+ * Executar: npx tsx scripts/seed-knowledge-full.ts
+ */
+export async function main() {
+  const orgs = await prisma.organization.findMany({ orderBy: { name: "asc" } });
 
-  if (!org) {
-    org = await prisma.organization.findFirst();
-  }
-
-  if (!org) {
+  if (orgs.length === 0) {
     console.error("Nenhuma organização encontrada. Crie uma organização primeiro.");
     process.exit(1);
   }
 
-  console.log(`Usando organização: ${org.name} (${org.slug})`);
-  console.log("Limpando base de conhecimento antiga...");
-  await prisma.knowledge.deleteMany({ where: { organizationId: org.id } });
+  console.log(`Apagando base de conhecimento antiga (todas as organizações)...`);
+  await prisma.knowledge.deleteMany({});
 
-  console.log("Populando base de conhecimento com dados do Amo Vidas...\n");
+  console.log(`Inserindo ${KNOWLEDGE_DATA.length} conhecimentos em ${orgs.length} organização(ões)...\n`);
 
-  for (const item of KNOWLEDGE_DATA) {
-    await prisma.knowledge.create({
-      data: {
-        ...item,
-        organizationId: org.id,
-      },
-    });
-    console.log(`✓ [${item.category}] ${item.title}`);
+  for (const org of orgs) {
+    console.log(`→ ${org.name} (${org.slug})`);
+    for (const item of KNOWLEDGE_DATA) {
+      await prisma.knowledge.create({
+        data: {
+          ...item,
+          organizationId: org.id,
+        },
+      });
+      console.log(`  ✓ [${item.category}] ${item.title}`);
+    }
+    console.log("");
   }
 
-  console.log(`\n✅ ${KNOWLEDGE_DATA.length} conhecimentos criados!`);
+  console.log(`✅ Concluído: ${KNOWLEDGE_DATA.length} conhecimentos × ${orgs.length} org(s).`);
+  await prisma.$disconnect();
 }
 
 main()

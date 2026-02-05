@@ -3,18 +3,14 @@
  * Site: https://cloudservo.com.br
  */
 
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getSessionOrRedirect } from "@/lib/auth";
 import { KnowledgeManager } from "./ui/KnowledgeManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function KnowledgePage() {
-  const session = await auth();
-  if (!session?.user?.organizationId) {
-    redirect("/login");
-  }
+  const session = await getSessionOrRedirect();
 
   const knowledgeItems = await prisma.knowledge.findMany({
     where: { organizationId: session.user.organizationId },

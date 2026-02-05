@@ -166,3 +166,18 @@ body {
   border: 1px solid var(--border);
   color: var(--muted-foreground);
 }
+
+/* Esconde a barra de scroll mantendo o scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.scrollbar-hide::-webkit-scrollbar-track,
+.scrollbar-hide::-webkit-scrollbar-thumb {
+  display: none !important;
+}

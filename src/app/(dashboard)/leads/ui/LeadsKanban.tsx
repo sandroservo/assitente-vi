@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import Link from "next/link";
 import { MessageSquare, Phone, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -101,7 +101,10 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const columnScrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const columnSentinelRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [mounted, setMounted] = useState(false);
+  useLayoutEffect(() => setMounted(true), []);
 
   const fetchLeads = useCallback(async (replace = true) => {
     try {
@@ -145,17 +148,23 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   }, [fetchLeads]);
 
   useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) loadMore();
-      },
-      { rootMargin: "200px", threshold: 0 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [loadMore]);
+    if (!mounted) return;
+    const observers: IntersectionObserver[] = [];
+    COLUMNS.forEach((col) => {
+      const root = columnScrollRefs.current[col.id];
+      const sentinel = columnSentinelRefs.current[col.id];
+      if (!root || !sentinel) return;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) loadMore();
+        },
+        { root, rootMargin: "200px", threshold: 0 }
+      );
+      observer.observe(sentinel);
+      observers.push(observer);
+    });
+    return () => observers.forEach((o) => o.disconnect());
+  }, [loadMore, mounted]);
 
   const getLeadsByStatus = (status: string) => {
     return leads.filter((lead) => lead.status === status);
@@ -252,14 +261,14 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="grid grid-cols-7 gap-2 pb-4 min-h-[calc(100vh-180px)]">
+      <div className="grid grid-cols-7 gap-2 pb-4 min-h-0">
         {COLUMNS.map((column) => {
           const columnLeads = getLeadsByStatus(column.id);
           return (
             <div
               key={column.id}
               className={cn(
-                "rounded-xl border min-w-0",
+                "rounded-xl border min-w-0 flex flex-col",
                 column.bgColor,
                 column.borderColor
               )}
@@ -267,7 +276,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
               {/* Header da coluna */}
               <div
                 className={cn(
-                  "px-4 py-3 rounded-t-xl flex items-center justify-between",
+                  "px-4 py-3 rounded-t-xl flex items-center justify-between shrink-0",
                   column.headerBg
                 )}
               >
@@ -282,23 +291,27 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                 </span>
               </div>
 
-              {/* Cards com Droppable */}
-              <Droppable droppableId={column.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={cn(
-                      "p-3 space-y-3 min-h-[100px] transition-colors",
-                      snapshot.isDraggingOver && "bg-opacity-70"
-                    )}
-                  >
-                    {columnLeads.length === 0 && !snapshot.isDraggingOver ? (
-                      <div className="text-center py-8 text-gray-400 text-sm">
-                        Nenhum lead
-                      </div>
-                    ) : (
-                      columnLeads.map((lead, index) => (
+              {/* Área rolável dos cards (scroll infinito por coluna) */}
+              <div
+                ref={(el) => { columnScrollRefs.current[column.id] = el; }}
+                className="overflow-y-auto max-h-[calc(100vh-200px)] min-h-[120px] flex-1 scrollbar-hide"
+              >
+                <Droppable droppableId={column.id}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={cn(
+                        "p-3 space-y-3 min-h-[100px] transition-colors",
+                        snapshot.isDraggingOver && "bg-opacity-70"
+                      )}
+                    >
+                      {columnLeads.length === 0 && !snapshot.isDraggingOver ? (
+                        <div className="text-center py-8 text-gray-400 text-sm">
+                          Nenhum lead
+                        </div>
+                      ) : (
+                        columnLeads.map((lead, index) => (
                         <Draggable
                           key={lead.id}
                           draggableId={lead.id}
@@ -361,23 +374,27 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                           )}
                         </Draggable>
                       ))
-                    )}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
+                      )}
+                      {provided.placeholder}
+                      {/* Sentinel: ao rolar até o fim dos cards desta coluna, carrega mais */}
+                      <div
+                        ref={(el) => { columnSentinelRefs.current[column.id] = el; }}
+                        className="flex justify-center items-center py-4 min-h-[48px]"
+                      >
+                        {loadingMore && (
+                          <Loader2 className="w-5 h-5 animate-spin text-pink-500" />
+                        )}
+                        {!hasMore && leads.length > 0 && !loadingMore && (
+                          <p className="text-xs text-gray-400">Todos carregados</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </Droppable>
+              </div>
             </div>
           );
         })}
-      </div>
-      {/* Sentinel para scroll infinito */}
-      <div ref={sentinelRef} className="h-4 flex justify-center py-6">
-        {loadingMore && (
-          <Loader2 className="w-6 h-6 animate-spin text-pink-500" />
-        )}
-        {!hasMore && leads.length > 0 && (
-          <p className="text-sm text-gray-400">Todos os leads carregados</p>
-        )}
       </div>
     </DragDropContext>
   );

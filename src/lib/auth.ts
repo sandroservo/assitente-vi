@@ -3,6 +3,7 @@
  * Site: https://cloudservo.com.br
  */
 
+import { redirect } from "next/navigation";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
@@ -88,3 +89,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "secretaria-vi-secret-key-change-in-production",
   trustHost: true, // necessário em produção (proxy/reverse proxy) para confiar no Host
 });
+
+/** Obtém a sessão ou redireciona para /login. Trata JWTSessionError (cookie inválido/expirado). */
+export async function getSessionOrRedirect() {
+  try {
+    const session = await auth();
+    if (!session?.user?.organizationId) {
+      redirect("/login");
+    }
+    return session;
+  } catch {
+    redirect("/login");
+  }
+}
