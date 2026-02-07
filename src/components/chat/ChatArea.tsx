@@ -25,6 +25,9 @@ import {
   Wifi,
   WifiOff,
   MessageCircleOff,
+  Image,
+  X,
+  FileText,
 } from "lucide-react";
 
 interface Message {
@@ -69,6 +72,9 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [sendingAudio, setSendingAudio] = useState(false);
+  const [sendingMedia, setSendingMedia] = useState(false);
+  const [showCardsGallery, setShowCardsGallery] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -290,6 +296,125 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
       alert("Erro ao enviar áudio");
     } finally {
       setSendingAudio(false);
+    }
+  }
+
+  // Cards disponíveis em public/cards/
+  const availableCards = [
+    { file: "planos.jpeg", label: "Planos" },
+    { file: "planos_e_seu_dependentes.jpeg", label: "Planos e Dependentes" },
+    { file: "checkups.jpeg", label: "Check-ups" },
+    { file: "especialidades_dentro_dos_palnos.jpeg", label: "Especialidades" },
+    { file: "exame_plano_ cobertura_ total.jpeg", label: "Exames - Cobertura Total" },
+    { file: "exame_plano_ especializado.jpeg", label: "Exames - Especializado" },
+    { file: "exame_plano_ rotina.jpeg", label: "Exames - Rotina" },
+  ];
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input
+    e.target.value = "";
+
+    // Limite de 15MB
+    if (file.size > 15 * 1024 * 1024) {
+      alert("Arquivo muito grande. Limite: 15MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1];
+      await sendMedia(base64, file.type, file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function sendMedia(base64: string, mimeType: string, fileName?: string, caption?: string) {
+    setSendingMedia(true);
+    setShowCardsGallery(false);
+
+    const isImage = mimeType.startsWith("image/");
+    const optimisticMsg: Message = {
+      id: `temp-media-${Date.now()}`,
+      body: isImage ? "📷 Enviando imagem..." : `📎 Enviando ${fileName || "arquivo"}...`,
+      direction: "out",
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
+      const res = await fetch("/api/messages/send-media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, base64, mimeType, fileName, caption }),
+      });
+
+      if (!res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Erro ao enviar arquivo");
+        return;
+      }
+
+      setTimeout(fetchNewMessages, 500);
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      alert("Erro ao enviar arquivo");
+    } finally {
+      setSendingMedia(false);
+    }
+  }
+
+  async function sendCard(card: { file: string; label: string }) {
+    setSendingMedia(true);
+    setShowCardsGallery(false);
+
+    const optimisticMsg: Message = {
+      id: `temp-card-${Date.now()}`,
+      body: `📷 Enviando card: ${card.label}...`,
+      direction: "out",
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
+      // Busca a imagem do card em public/cards/ e converte para base64
+      const response = await fetch(`/cards/${card.file}`);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const res = await fetch("/api/messages/send-media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId,
+          base64,
+          mimeType: "image/jpeg",
+          fileName: card.file,
+          caption: card.label,
+        }),
+      });
+
+      if (!res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Erro ao enviar card");
+        return;
+      }
+
+      setTimeout(fetchNewMessages, 500);
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      alert("Erro ao enviar card");
+    } finally {
+      setSendingMedia(false);
     }
   }
 
@@ -618,51 +743,126 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 md:gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
-                  <Paperclip className="h-5 w-5 text-gray-500" />
-                </Button>
-                <Input
-                  placeholder="Digite uma mensagem..."
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-400"
-                  disabled={loading || sendingAudio}
-                />
-                {text.trim() ? (
-                  <Button
-                    onClick={sendMessage}
-                    disabled={loading}
-                    size="icon"
-                    className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
-                  >
-                    {loading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Send className="h-5 w-5" />
-                    )}
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={startRecording}
-                    disabled={sendingAudio}
-                    size="icon"
-                    className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
-                    title="Gravar áudio"
-                  >
-                    {sendingAudio ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Mic className="h-5 w-5" />
-                    )}
-                  </Button>
+              <div className="relative">
+                {/* Galeria de Cards */}
+                {showCardsGallery && (
+                  <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border p-4 max-h-80 overflow-auto z-10">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-sm text-gray-700">Cards Informativos</h4>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full"
+                        onClick={() => setShowCardsGallery(false)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {availableCards.map((card) => (
+                        <button
+                          key={card.file}
+                          onClick={() => sendCard(card)}
+                          disabled={sendingMedia}
+                          className="group relative rounded-lg overflow-hidden border hover:border-pink-400 transition-all hover:shadow-md disabled:opacity-50"
+                        >
+                          <img
+                            src={`/cards/${card.file}`}
+                            alt={card.label}
+                            className="w-full h-20 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 flex items-end p-1.5">
+                            <span className="text-white text-[10px] font-medium leading-tight">{card.label}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
+
+                {/* Input file oculto */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+
+                <div className="flex items-center gap-2 md:gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
+                  {/* Botão Anexo */}
+                  <div className="relative flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-full hover:bg-gray-100"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={sendingMedia}
+                      title="Enviar arquivo"
+                    >
+                      <Paperclip className="h-5 w-5 text-gray-500" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-full hover:bg-purple-50"
+                      onClick={() => setShowCardsGallery((prev) => !prev)}
+                      disabled={sendingMedia}
+                      title="Cards dos planos"
+                    >
+                      <Image className="h-5 w-5 text-purple-500" />
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder="Digite uma mensagem..."
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                    disabled={loading || sendingAudio || sendingMedia}
+                  />
+                  {sendingMedia ? (
+                    <Button
+                      disabled
+                      size="icon"
+                      className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 shadow-md"
+                    >
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </Button>
+                  ) : text.trim() ? (
+                    <Button
+                      onClick={sendMessage}
+                      disabled={loading}
+                      size="icon"
+                      className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+                    >
+                      {loading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Send className="h-5 w-5" />
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={startRecording}
+                      disabled={sendingAudio}
+                      size="icon"
+                      className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+                      title="Gravar áudio"
+                    >
+                      {sendingAudio ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Mic className="h-5 w-5" />
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </div>

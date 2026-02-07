@@ -124,6 +124,60 @@ export async function evolutionSendAudio({ number, base64, mimeType }: { number:
 }
 
 /**
+ * Envia mídia (imagem, documento, vídeo) via Evolution API
+ */
+export async function evolutionSendMedia({
+  number,
+  mediatype,
+  media,
+  caption,
+  fileName,
+}: {
+  number: string;
+  mediatype: "image" | "document" | "video";
+  media: string; // base64 data URI ou URL pública
+  caption?: string;
+  fileName?: string;
+}) {
+  const { baseUrl, instance, token } = await getEvolutionConfig();
+
+  if (!baseUrl || !instance || !token) {
+    throw new Error("Evolution API não configurada (baseUrl, instance ou token faltando)");
+  }
+
+  const url = `${baseUrl.replace(/\/api\/?$/, "")}/message/sendMedia/${instance}`;
+
+  console.log("[Evolution] Sending media to:", number, "type:", mediatype);
+
+  const body: Record<string, unknown> = {
+    number,
+    mediatype,
+    media,
+  };
+  if (caption) body.caption = caption;
+  if (fileName) body.fileName = fileName;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: token,
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(60000),
+  });
+
+  if (!res.ok) {
+    const resBody = await res.text().catch(() => "");
+    console.error("[Evolution] Send media failed:", res.status, resBody);
+    throw new Error(`Evolution sendMedia failed: ${res.status} ${resBody}`);
+  }
+
+  console.log("[Evolution] Media sent successfully");
+  return res.json().catch(() => ({}));
+}
+
+/**
  * Calcula delay de digitação baseado no tamanho do texto
  * Simula velocidade de digitação humana (~50-80 caracteres por segundo)
  */
