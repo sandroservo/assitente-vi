@@ -104,6 +104,7 @@ export async function POST(req: Request) {
         data: {
           lastMessageAt: new Date(),
           ...(pushName && { pushName }),
+          ...(pushName && !lead.name && { name: pushName }),
           ...(profilePicture && !lead.avatarUrl && { avatarUrl: profilePicture }),
         },
       });
@@ -112,6 +113,7 @@ export async function POST(req: Request) {
         data: {
           organizationId,
           phone,
+          name: pushName || null,
           pushName: pushName || null,
           avatarUrl: profilePicture || null,
           status: "NOVO",

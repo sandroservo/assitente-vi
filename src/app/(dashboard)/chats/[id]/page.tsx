@@ -38,7 +38,11 @@ export default async function ChatDetailPage({
     where: { id },
     include: {
       lead: true,
-      messages: { orderBy: { createdAt: "asc" }, take: 200 },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        take: 200,
+        include: { sentByUser: { select: { id: true, name: true } } },
+      },
     },
   });
 
@@ -79,11 +83,12 @@ export default async function ChatDetailPage({
     notes: currentConversation.lead.notes,
   };
 
-  const messages = currentConversation.messages.map((m: typeof currentConversation.messages[number]) => ({
+  const messages = (currentConversation.messages as any[]).map((m) => ({
     id: m.id,
     body: m.body || "",
     direction: m.direction as "in" | "out",
     createdAt: m.createdAt,
+    sentByUserName: m.sentByUser?.name ?? null,
   }));
 
   return (

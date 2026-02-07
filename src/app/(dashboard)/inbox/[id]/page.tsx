@@ -32,7 +32,11 @@ export default async function ChatPage({
           tags: { select: { id: true, name: true, color: true } },
         },
       },
-      messages: { orderBy: { createdAt: "asc" }, take: 200 },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        take: 200,
+        include: { sentByUser: { select: { id: true, name: true } } },
+      },
     },
   });
 
@@ -129,7 +133,10 @@ export default async function ChatPage({
         <Separator />
         <InboxConversation
           conversationId={convo.id}
-          initialMessages={convo.messages}
+          initialMessages={(convo.messages as any[]).map((m) => ({
+            ...m,
+            sentByUserName: m.sentByUser?.name ?? null,
+          }))}
         />
         <Separator />
         <div className="p-4">

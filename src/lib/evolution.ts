@@ -87,6 +87,43 @@ export async function evolutionSendText({ number, text }: SendTextArgs) {
 }
 
 /**
+ * Envia áudio (base64) via Evolution API como mensagem de voz (PTT)
+ */
+export async function evolutionSendAudio({ number, base64, mimeType }: { number: string; base64: string; mimeType?: string }) {
+  const { baseUrl, instance, token } = await getEvolutionConfig();
+
+  if (!baseUrl || !instance || !token) {
+    throw new Error("Evolution API não configurada (baseUrl, instance ou token faltando)");
+  }
+
+  const url = `${baseUrl.replace(/\/api\/?$/, "")}/message/sendWhatsAppAudio/${instance}`;
+
+  console.log("[Evolution] Sending audio to:", number);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: token,
+    },
+    body: JSON.stringify({
+      number,
+      audio: `data:${mimeType || "audio/ogg"};base64,${base64}`,
+    }),
+    signal: AbortSignal.timeout(60000),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[Evolution] Send audio failed:", res.status, body);
+    throw new Error(`Evolution sendAudio failed: ${res.status} ${body}`);
+  }
+
+  console.log("[Evolution] Audio sent successfully");
+  return res.json().catch(() => ({}));
+}
+
+/**
  * Calcula delay de digitação baseado no tamanho do texto
  * Simula velocidade de digitação humana (~50-80 caracteres por segundo)
  */

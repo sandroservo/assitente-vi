@@ -18,6 +18,7 @@ interface Message {
   body: string | null;
   direction: "in" | "out";
   createdAt: Date | string;
+  sentByUserName?: string | null;
 }
 
 interface InboxConversationProps {
@@ -27,6 +28,7 @@ interface InboxConversationProps {
     body: string | null;
     direction: string;
     createdAt: Date;
+    sentByUserName?: string | null;
   }>;
 }
 
@@ -40,6 +42,7 @@ export default function InboxConversation({
       body: m.body ?? "",
       direction: m.direction as "in" | "out",
       createdAt: m.createdAt,
+      sentByUserName: m.sentByUserName ?? null,
     }))
   );
   const lastMessageTime = useRef<string | null>(null);
@@ -105,23 +108,32 @@ export default function InboxConversation({
               m.direction === "out" ? "justify-end" : "justify-start"
             }`}
           >
-            <div
-              className={`max-w-[70%] p-3 rounded-lg ${
-                m.direction === "out"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted"
-              }`}
-            >
-              <p className="text-sm whitespace-pre-wrap">{m.body ?? ""}</p>
-              <p
-                className={`text-[10px] mt-1 ${
+            <div>
+              <div
+                className={`max-w-[70%] p-3 rounded-lg ${
                   m.direction === "out"
-                    ? "text-primary-foreground/70"
-                    : "text-muted-foreground"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted"
                 }`}
               >
-                {new Date(m.createdAt).toLocaleString("pt-BR")}
-              </p>
+                <p className="text-sm whitespace-pre-wrap">{m.body ?? ""}</p>
+                <p
+                  className={`text-[10px] mt-1 ${
+                    m.direction === "out"
+                      ? "text-primary-foreground/70"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {new Date(m.createdAt).toLocaleString("pt-BR")}
+                </p>
+              </div>
+              {m.direction === "out" && m.sentByUserName && (
+                <p className={`text-[10px] text-muted-foreground mt-0.5 ${
+                  m.direction === "out" ? "text-right" : "text-left"
+                }`}>
+                  {m.sentByUserName}
+                </p>
+              )}
             </div>
           </div>
         ))}

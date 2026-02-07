@@ -15,6 +15,7 @@ import {
   Send,
   Paperclip,
   Mic,
+  Square,
   Phone,
   RefreshCw,
   MoreHorizontal,
@@ -31,6 +32,7 @@ interface Message {
   body: string;
   direction: "in" | "out";
   createdAt: Date | string;
+  sentByUserName?: string | null;
 }
 
 interface Lead {
@@ -64,6 +66,12 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
   const [lead, setLead] = useState(initialLead);
   const [isConnected, setIsConnected] = useState(true);
   const [activeTab, setActiveTab] = useState("conversa");
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [sendingAudio, setSendingAudio] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTime = useRef<string | null>(null);
   const shouldAutoScroll = useRef(true);
@@ -178,6 +186,117 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
     } finally {
       setLoading(false);
     }
+  }
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : "audio/webm",
+      });
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        setRecordingTime(0);
+
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (blob.size < 1000) return; // áudio muito curto, ignora
+
+        await sendAudio(blob);
+      };
+
+      mediaRecorder.start(250);
+      mediaRecorderRef.current = mediaRecorder;
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((t) => t + 1);
+      }, 1000);
+    } catch {
+      alert("Não foi possível acessar o microfone. Verifique as permissões do navegador.");
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  }
+
+  function cancelRecording() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = () => {
+        mediaRecorderRef.current?.stream?.getTracks().forEach((t) => t.stop());
+      };
+      mediaRecorderRef.current.stop();
+    }
+    audioChunksRef.current = [];
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+  }
+
+  async function sendAudio(blob: Blob) {
+    setSendingAudio(true);
+
+    const optimisticMsg: Message = {
+      id: `temp-audio-${Date.now()}`,
+      body: "🎤 Enviando áudio...",
+      direction: "out",
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const res = await fetch("/api/messages/send-audio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId,
+          base64,
+          mimeType: blob.type || "audio/webm",
+        }),
+      });
+
+      if (!res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+        alert("Erro ao enviar áudio");
+        return;
+      }
+
+      setTimeout(fetchNewMessages, 500);
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      alert("Erro ao enviar áudio");
+    } finally {
+      setSendingAudio(false);
+    }
+  }
+
+  function formatRecordingTime(seconds: number) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
   async function handleHandoff() {
@@ -418,7 +537,9 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
                             ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white"
                             : "bg-gradient-to-br from-pink-500 to-pink-600 text-white"
                         )}>
-                          {lead.ownerType === "human" ? "👤" : "Vi"}
+                          {msg.sentByUserName
+                            ? msg.sentByUserName.split(" ")[0][0].toUpperCase()
+                            : lead.ownerType === "human" ? "👤" : "Vi"}
                         </div>
                       )}
 
@@ -457,7 +578,7 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
                           msg.direction === "out" ? "text-right" : "text-left"
                         )}>
                           {msg.direction === "out"
-                            ? lead.ownerType === "human" ? "Você" : "Vi"
+                            ? msg.sentByUserName || (lead.ownerType === "human" ? "Você" : "Vi")
                             : lead.name || lead.pushName || "Lead"}
                         </p>
                       </div>
@@ -470,39 +591,80 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
           </div>
 
           <div className="bg-[#f0f2f5] border-t p-3 md:p-4 flex-shrink-0">
-            <div className="flex items-center gap-2 md:gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
-                <Paperclip className="h-5 w-5 text-gray-500" />
-              </Button>
-              <Input
-                placeholder="Digite uma mensagem..."
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-400"
-                disabled={loading}
-              />
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
-                <Mic className="h-5 w-5 text-gray-500" />
-              </Button>
-              <Button
-                onClick={sendMessage}
-                disabled={loading || !text.trim()}
-                size="icon"
-                className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
-              >
-                {loading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
+            {isRecording ? (
+              <div className="flex items-center gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full hover:bg-red-50 text-red-500"
+                  onClick={cancelRecording}
+                  title="Cancelar gravação"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </Button>
+                <div className="flex-1 flex items-center gap-3">
+                  <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-sm font-medium text-red-600">
+                    Gravando {formatRecordingTime(recordingTime)}
+                  </span>
+                </div>
+                <Button
+                  onClick={stopRecording}
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+                  title="Enviar áudio"
+                >
                   <Send className="h-5 w-5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 md:gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-gray-100">
+                  <Paperclip className="h-5 w-5 text-gray-500" />
+                </Button>
+                <Input
+                  placeholder="Digite uma mensagem..."
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                  disabled={loading || sendingAudio}
+                />
+                {text.trim() ? (
+                  <Button
+                    onClick={sendMessage}
+                    disabled={loading}
+                    size="icon"
+                    className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={startRecording}
+                    disabled={sendingAudio}
+                    size="icon"
+                    className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+                    title="Gravar áudio"
+                  >
+                    {sendingAudio ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Mic className="h-5 w-5" />
+                    )}
+                  </Button>
                 )}
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
         )}

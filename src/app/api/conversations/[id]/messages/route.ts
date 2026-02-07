@@ -27,6 +27,9 @@ export async function GET(
             : undefined,
           orderBy: { createdAt: "asc" },
           take: 100,
+          include: {
+            sentByUser: { select: { id: true, name: true } },
+          },
         },
       },
     });
@@ -48,11 +51,12 @@ export async function GET(
 
     return NextResponse.json({
       ok: true,
-      messages: conversation.messages.map((m: typeof conversation.messages[number]) => ({
+      messages: (conversation.messages as any[]).map((m) => ({
         id: m.id,
         body: m.body ?? "",
         direction: m.direction,
         createdAt: m.createdAt.toISOString(),
+        sentByUserName: m.sentByUser?.name ?? null,
       })),
       lead: {
         id: conversation.lead.id,

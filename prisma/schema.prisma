@@ -66,6 +66,7 @@ model User {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   handoffs     Handoff[]    @relation("AssignedTo")
+  sentMessages Message[]    @relation("SentByUser")
 
   @@index([organizationId])
   @@index([email])
@@ -224,10 +225,12 @@ model Message {
   type           String           @default("text")
   body           String?
   providerId     String?
+  sentByUserId   String?          // ID do atendente que enviou (null = bot ou lead)
   sentAt         DateTime?
   createdAt      DateTime         @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sentByUser   User?        @relation("SentByUser", fields: [sentByUserId], references: [id])
 
   @@index([conversationId, createdAt])
 }

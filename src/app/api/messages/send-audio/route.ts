@@ -1,22 +1,22 @@
 /**
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
+ *
+ * API para enviar áudio gravado pelo atendente via WhatsApp (Evolution API)
  */
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { evolutionSendText } from "@/lib/evolution";
+import { evolutionSendAudio, evolutionSendPresence } from "@/lib/evolution";
 import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    const { conversationId, text } = await req.json();
+    const { conversationId, base64, mimeType } = await req.json();
 
-    console.log("[Send Message] Request:", { conversationId, textLength: text?.length });
-
-    if (!conversationId || !text) {
+    if (!conversationId || !base64) {
       return NextResponse.json(
-        { ok: false, error: "missing fields" },
+        { ok: false, error: "conversationId e base64 são obrigatórios" },
         { status: 400 }
       );
     }
@@ -27,23 +27,26 @@ export async function POST(req: Request) {
     });
 
     if (!convo) {
-      console.error("[Send Message] Conversation not found:", conversationId);
       return NextResponse.json(
-        { ok: false, error: "conversation not found" },
+        { ok: false, error: "Conversa não encontrada" },
         { status: 404 }
       );
     }
 
-    console.log("[Send Message] Sending to:", convo.lead.phone);
+    // Envia presença "gravando áudio" antes de enviar
+    await evolutionSendPresence(convo.lead.phone, "recording").catch(() => {});
 
     try {
-      await evolutionSendText({ number: convo.lead.phone, text });
-      console.log("[Send Message] Message sent successfully");
+      await evolutionSendAudio({
+        number: convo.lead.phone,
+        base64,
+        mimeType: mimeType || "audio/ogg",
+      });
     } catch (evolutionError) {
-      console.error("[Send Message] Evolution API error:", evolutionError);
+      console.error("[Send Audio] Evolution API error:", evolutionError);
       const errorMessage = evolutionError instanceof Error ? evolutionError.message : "Erro desconhecido";
       return NextResponse.json(
-        { ok: false, error: `Erro ao enviar mensagem: ${errorMessage}` },
+        { ok: false, error: `Erro ao enviar áudio: ${errorMessage}` },
         { status: 500 }
       );
     }
@@ -56,8 +59,8 @@ export async function POST(req: Request) {
       data: {
         conversationId,
         direction: "out",
-        type: "text",
-        body: text,
+        type: "audio",
+        body: "[Áudio enviado]",
         sentByUserId,
         sentAt: new Date(),
       },
@@ -75,9 +78,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, message: msg });
   } catch (error) {
-    console.error("Send message error:", error);
+    console.error("[Send Audio] Error:", error);
     return NextResponse.json(
-      { ok: false, error: "internal error" },
+      { ok: false, error: "Erro interno ao enviar áudio" },
       { status: 500 }
     );
   }

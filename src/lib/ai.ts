@@ -255,36 +255,40 @@ function extractLeadData(
     result.email = emailMatch[0].toLowerCase();
   }
 
-  // Tenta extrair nome se ainda não temos
+  // Tenta extrair nome apenas com padrões explícitos ("me chamo X", "sou o X")
+  // NÃO usa fallback genérico para evitar salvar frases como nome
   if (!context.leadName) {
     const msg = message.trim();
     
-    // Padrões comuns de resposta de nome
+    // Palavras comuns que não são nomes de pessoa
+    const NOT_NAMES = new Set([
+      "vi", "sim", "não", "nao", "oi", "ola", "olá", "ok", "então", "entao",
+      "quanto", "custa", "qual", "valor", "preço", "preco", "plano", "planos",
+      "me", "explica", "explicar", "como", "funciona", "quero", "saber", "mais",
+      "pode", "gostaria", "tenho", "interesse", "informação", "informacao",
+      "por", "favor", "bom", "dia", "boa", "tarde", "noite", "obrigado", "obrigada",
+      "valeu", "tudo", "bem", "tá", "ta", "to", "tô", "aqui", "isso", "esse",
+      "essa", "tem", "ter", "ser", "uma", "uns", "dos", "das", "para", "pra",
+    ]);
+
+    // Apenas padrões explícitos de identificação
     const namePatterns = [
-      /(?:me chamo|meu nome é|sou o|sou a|pode me chamar de|é)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)?)/i,
-      /^([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)?)$/,
+      /(?:me chamo|meu nome é|sou o|sou a|pode me chamar de)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)?)/i,
     ];
 
     for (const pattern of namePatterns) {
       const match = msg.match(pattern);
       if (match && match[1]) {
         const potentialName = match[1].trim();
-        // Verifica se parece um nome (não é muito curto, não tem números)
-        if (potentialName.length >= 2 && !/\d/.test(potentialName)) {
+        const lowerWords = potentialName.toLowerCase().split(/\s+/);
+        if (
+          potentialName.length >= 2 &&
+          !/\d/.test(potentialName) &&
+          !lowerWords.some((w) => NOT_NAMES.has(w))
+        ) {
           result.name = potentialName;
           break;
         }
-      }
-    }
-
-    // Se a mensagem for curta e parecer só um nome
-    if (!result.name && msg.length <= 30 && /^[A-ZÀ-Úa-zà-ú\s]+$/.test(msg)) {
-      const words = msg.split(/\s+/);
-      if (words.length <= 3 && words[0].length >= 2) {
-        result.name = msg
-          .split(" ")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-          .join(" ");
       }
     }
   }
