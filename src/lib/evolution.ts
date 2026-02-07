@@ -108,7 +108,7 @@ export async function evolutionSendAudio({ number, base64, mimeType }: { number:
     },
     body: JSON.stringify({
       number,
-      audio: `data:${mimeType || "audio/ogg"};base64,${base64}`,
+      audio: base64,
     }),
     signal: AbortSignal.timeout(60000),
   });
