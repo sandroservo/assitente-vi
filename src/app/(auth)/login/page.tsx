@@ -59,8 +59,8 @@ function LoginForm() {
             <img
               src="/assets/logo.png"
               alt="Assistente Vi"
-              width={180}
-              height={180}
+              width={280}
+              height={280}
               className="mx-auto"
             />
           </div>
@@ -79,8 +79,8 @@ function LoginForm() {
             <img
               src="/assets/logo.png"
               alt="Assistente Vi"
-              width={100}
-              height={100}
+              width={160}
+              height={160}
               className="mx-auto"
             />
           </div>
