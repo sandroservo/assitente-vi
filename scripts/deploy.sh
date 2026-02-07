@@ -110,10 +110,15 @@ else
 fi
 cd "\$APP_DIR" || exit 1
 
-# .env: criar a partir do example se não existir
+# .env: usar symlink do .env pai (monorepo) ou criar a partir do example
 if [ ! -f .env ]; then
-  cp .env.example .env
-  echo "⚠️  .env criado a partir de .env.example. Edite no servidor: nano \$APP_DIR/.env"
+  if [ -f "\$SERVER_DIR/.env" ] && [ "\$APP_DIR" != "\$SERVER_DIR" ]; then
+    ln -sf "\$SERVER_DIR/.env" .env
+    echo "🔗 .env vinculado a \$SERVER_DIR/.env"
+  elif [ -f .env.example ]; then
+    cp .env.example .env
+    echo "⚠️  .env criado a partir de .env.example. Edite no servidor: nano \$APP_DIR/.env"
+  fi
 fi
 
 # Serviço systemd: instalar se não existir (primeira vez)
@@ -126,6 +131,9 @@ fi
 
 echo "📦 Instalando dependências (incl. dev para build)..."
 npm ci || npm install
+
+echo "🗃️  Sincronizando banco de dados (prisma db push)..."
+npx prisma db push --accept-data-loss || echo "⚠️  prisma db push falhou, verifique DATABASE_URL no .env"
 
 echo "🔨 Build..."
 npm run build
