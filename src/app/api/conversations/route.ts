@@ -15,10 +15,19 @@ export async function GET() {
     const convos = await prisma.conversation.findMany({
       orderBy: { lastMessageAt: "desc" },
       include: { lead: true },
-      take: 100,
+      take: 200,
     });
 
-    const conversations = convos.map((c: typeof convos[number]) => ({
+    // Uma conversa por lead (evita duplicata)
+    const byLeadId = new Map<string, (typeof convos)[number]>();
+    for (const c of convos) {
+      if (!byLeadId.has(c.leadId)) byLeadId.set(c.leadId, c);
+    }
+    const uniqueConvos = Array.from(byLeadId.values()).sort(
+      (a, b) => (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0)
+    );
+
+    const conversations = uniqueConvos.map((c: (typeof uniqueConvos)[number]) => ({
       id: c.id,
       name: c.lead.name,
       pushName: c.lead.pushName,

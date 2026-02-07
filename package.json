@@ -12,7 +12,9 @@
     "start": "next start",
     "start:prod": "next start -p 3001",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "seed:knowledge": "tsx scripts/seed-knowledge.ts",
+    "atualizar-vi": "tsx scripts/seed-knowledge.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

@@ -18,11 +18,20 @@ export default async function ChatDetailPage({
   const { id } = await params;
 
   // Busca todas as conversas para a lista
-  const conversations = await prisma.conversation.findMany({
+  const allConversations = await prisma.conversation.findMany({
     orderBy: { lastMessageAt: "desc" },
     include: { lead: true },
-    take: 100,
+    take: 200,
   });
+
+  // Uma conversa por lead (evita duplicata na lista)
+  const byLeadId = new Map<string, (typeof allConversations)[number]>();
+  for (const c of allConversations) {
+    if (!byLeadId.has(c.leadId)) byLeadId.set(c.leadId, c);
+  }
+  const conversations = Array.from(byLeadId.values()).sort(
+    (a, b) => (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0)
+  );
 
   // Busca a conversa atual com mensagens
   const currentConversation = await prisma.conversation.findUnique({
@@ -43,7 +52,7 @@ export default async function ChatDetailPage({
     data: { unreadCount: 0 },
   });
 
-  const chats = conversations.map((c: typeof conversations[number]) => ({
+  const chats = conversations.map((c: (typeof conversations)[number]) => ({
     id: c.id,
     name: c.lead.name,
     pushName: c.lead.pushName,

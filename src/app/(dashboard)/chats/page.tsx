@@ -12,10 +12,19 @@ export default async function ChatsPage() {
   const conversations = await prisma.conversation.findMany({
     orderBy: { lastMessageAt: "desc" },
     include: { lead: true },
-    take: 100,
+    take: 200,
   });
 
-  const chats = conversations.map((c: typeof conversations[number]) => ({
+  // Uma conversa por lead (evita duplicata quando há mais de uma Conversation para o mesmo lead)
+  const byLeadId = new Map<string, (typeof conversations)[number]>();
+  for (const c of conversations) {
+    if (!byLeadId.has(c.leadId)) byLeadId.set(c.leadId, c);
+  }
+  const uniqueConversations = Array.from(byLeadId.values()).sort(
+    (a, b) => (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0)
+  );
+
+  const chats = uniqueConversations.map((c: (typeof uniqueConversations)[number]) => ({
     id: c.id,
     name: c.lead.name,
     pushName: c.lead.pushName,

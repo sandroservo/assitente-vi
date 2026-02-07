@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -86,6 +88,7 @@ export function UsersManager({ users: initialUsers, currentUserId, currentUserRo
   const [users, setUsers] = useState<UserData[]>(initialUsers);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -97,6 +100,7 @@ export function UsersManager({ users: initialUsers, currentUserId, currentUserRo
   const resetForm = () => {
     setFormData({ name: "", email: "", password: "", role: "AGENT" });
     setEditingUser(null);
+    setError(null);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -118,6 +122,7 @@ export function UsersManager({ users: initialUsers, currentUserId, currentUserRo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
       if (editingUser) {
@@ -131,28 +136,38 @@ export function UsersManager({ users: initialUsers, currentUserId, currentUserRo
           }),
         });
 
+        const data = await res.json();
         if (res.ok) {
-          const updated = await res.json();
-          setUsers(users.map((u) => (u.id === editingUser.id ? { ...u, ...updated.user } : u)));
+          setUsers(users.map((u) => (u.id === editingUser.id ? { ...u, ...data.user } : u)));
           setIsOpen(false);
           resetForm();
+        } else {
+          setError(data.error || "Erro ao atualizar usuário.");
         }
       } else {
+        if (formData.password.length < 6) {
+          setError("A senha deve ter no mínimo 6 caracteres.");
+          setLoading(false);
+          return;
+        }
         const res = await fetch("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(formData),
         });
 
+        const data = await res.json();
         if (res.ok) {
-          const data = await res.json();
           setUsers([data.user, ...users]);
           setIsOpen(false);
           resetForm();
+        } else {
+          setError(data.error || "Erro ao criar usuário. Verifique o email.");
         }
       }
-    } catch (error) {
-      console.error("Erro ao salvar usuário:", error);
+    } catch (err) {
+      console.error("Erro ao salvar usuário:", err);
+      setError("Erro de conexão. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -216,62 +231,82 @@ export function UsersManager({ users: initialUsers, currentUserId, currentUserRo
               Novo Usuário
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md pb-8">
             <DialogHeader>
               <DialogTitle>
-                {editingUser ? "Editar Usuário" : "Novo Usuário"}
+                {editingUser ? "Editar usuário" : "Novo usuário"}
               </DialogTitle>
+              <DialogDescription>
+                {editingUser
+                  ? "Altere nome, função ou defina uma nova senha."
+                  : "Preencha os dados para adicionar um usuário à organização."}
+              </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
+                <Label htmlFor="user-name">Nome</Label>
                 <Input
-                  id="name"
+                  id="user-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nome do usuário"
+                  placeholder="Ex.: Maria Silva"
                   required
+                  autoComplete="name"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="user-email">Email</Label>
                 <Input
-                  id="email"
+                  id="user-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="email@exemplo.com"
                   disabled={!!editingUser}
                   required={!editingUser}
+                  autoComplete="email"
                 />
+                {editingUser && (
+                  <p className="text-xs text-gray-500">O email não pode ser alterado.</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">
-                  {editingUser ? "Nova Senha (opcional)" : "Senha"}
+                <Label htmlFor="user-password">
+                  {editingUser ? "Nova senha (opcional)" : "Senha (mín. 6 caracteres)"}
                 </Label>
                 <Input
-                  id="password"
+                  id="user-password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="••••••••"
+                  placeholder={editingUser ? "Deixe em branco para manter" : "••••••••"}
                   required={!editingUser}
+                  minLength={editingUser ? undefined : 6}
+                  autoComplete={editingUser ? "new-password" : "new-password"}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role">Função</Label>
+                <Label htmlFor="user-role" className="block">
+                  Função
+                </Label>
                 <Select
                   value={formData.role}
                   onValueChange={(value) => setFormData({ ...formData, role: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="user-role" className="w-full">
                     <SelectValue placeholder="Selecione a função" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={4}>
                     {currentUserRole === "OWNER" && (
                       <SelectItem value="ADMIN">Administrador</SelectItem>
                     )}
@@ -281,18 +316,19 @@ export function UsersManager({ users: initialUsers, currentUserId, currentUserRo
                 </Select>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
+              <DialogFooter className="gap-2 sm:gap-0 pt-6">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => handleOpenChange(false)}
+                  disabled={loading}
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-gradient-to-r from-[#FE3E6E] to-[#C24695]"
+                  className="bg-[#FE3E6E] hover:bg-[#C24695]"
                 >
                   {loading ? (
                     <>
@@ -300,12 +336,12 @@ export function UsersManager({ users: initialUsers, currentUserId, currentUserRo
                       Salvando...
                     </>
                   ) : editingUser ? (
-                    "Salvar"
+                    "Salvar alterações"
                   ) : (
-                    "Criar"
+                    "Criar usuário"
                   )}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>

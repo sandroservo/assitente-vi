@@ -29,6 +29,23 @@ Contexto para a IA (e para a equipe) saber **onde paramos** no projeto da Secret
 
 ---
 
+## Atualizações da Vi (base de conhecimento)
+
+Para **atualizar a base de conhecimento** da Vi (planos, check-ups, regras, links, parceiros) com os dados oficiais do Amo Vidas:
+
+```bash
+cd assistente-vi
+npm run atualizar-vi
+# ou
+npm run seed:knowledge
+```
+
+Isso executa `scripts/seed-knowledge.ts` → `seed-knowledge-full.ts`: **apaga** toda a base atual e **insere** de novo os itens definidos em `KNOWLEDGE_DATA`. Use após alterar preços, check-ups, links ou parceiros em `scripts/seed-knowledge-full.ts`.
+
+**Arquivo a editar para mudar o que a Vi sabe:** `scripts/seed-knowledge-full.ts`.
+
+---
+
 ## Arquivos importantes
 
 | Área | Caminho |
@@ -40,6 +57,8 @@ Contexto para a IA (e para a equipe) saber **onde paramos** no projeto da Secret
 | Lista de exceção (API) | `src/app/api/excluded-contacts/` |
 | Lista de exceção (UI) | `src/app/(dashboard)/settings/ui/ExcludedContactsCard.tsx` |
 | Schema Prisma | `prisma/schema.prisma` |
+| Base de conhecimento (seed) | `scripts/seed-knowledge-full.ts` |
+| Atualizar base da Vi | `npm run atualizar-vi` ou `npm run seed:knowledge` |
 
 ---
 

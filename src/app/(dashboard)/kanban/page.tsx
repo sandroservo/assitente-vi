@@ -6,12 +6,13 @@
 export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
-import { LeadsKanban } from "@/app/(dashboard)/leads/ui/LeadsKanban";
+import { LeadsKanbanWrapper } from "@/app/(dashboard)/leads/ui/LeadsKanbanWrapper";
 
 export default async function KanbanPage() {
   const leadsData = await prisma.lead.findMany({
     orderBy: { updatedAt: "desc" },
     include: {
+      tags: true,
       conversations: {
         orderBy: { lastMessageAt: "desc" },
         take: 1,
@@ -26,8 +27,15 @@ export default async function KanbanPage() {
     phone: lead.phone,
     status: lead.status,
     ownerType: lead.ownerType,
+    category: lead.category || "geral",
+    summary: lead.summary,
+    priority: lead.priority || "low",
+    source: lead.source || "whatsapp",
+    updatedAt: lead.updatedAt.toISOString(),
     createdAt: lead.createdAt.toISOString(),
     conversationId: lead.conversations[0]?.id || null,
+    tags: lead.tags.map(t => ({ id: t.id, name: t.name, color: t.color })),
+    responsible: null,
   }));
 
   return (
@@ -39,7 +47,7 @@ export default async function KanbanPage() {
         </p>
       </div>
 
-      <LeadsKanban initialLeads={leads} />
+      <LeadsKanbanWrapper initialLeads={leads} />
     </div>
   );
 }

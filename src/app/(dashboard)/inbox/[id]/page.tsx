@@ -9,6 +9,7 @@ import ChatComposer from "./ui/ChatComposer";
 import InboxConversation from "./ui/InboxConversation";
 import HandoffButton from "./ui/HandoffButton";
 import ClienteParouResponderButton from "./ui/ClienteParouResponderButton";
+import LeadActions from "./ui/LeadActions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -26,7 +27,11 @@ export default async function ChatPage({
   const convo = await prisma.conversation.findUnique({
     where: { id },
     include: {
-      lead: true,
+      lead: {
+        include: {
+          tags: { select: { id: true, name: true, color: true } },
+        },
+      },
       messages: { orderBy: { createdAt: "asc" }, take: 200 },
     },
   });
@@ -95,6 +100,14 @@ export default async function ChatPage({
           <ClienteParouResponderButton
             leadId={convo.leadId}
             conversationId={convo.id}
+          />
+
+          <Separator />
+
+          <LeadActions
+            leadId={convo.leadId}
+            leadName={convo.lead.name}
+            leadTags={convo.lead.tags}
           />
 
           {convo.lead.summary && (

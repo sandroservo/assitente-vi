@@ -121,12 +121,9 @@ export async function POST(req: Request) {
       });
     }
 
-    // Busca ou cria conversa vinculada à instância
+    // Single-tenant: uma conversa por lead (busca por leadId apenas)
     let conversation = await prisma.conversation.findFirst({
-      where: {
-        leadId: lead.id,
-        ...(instance && { instanceId: instance.id }),
-      },
+      where: { leadId: lead.id },
     });
 
     if (conversation) {
@@ -141,7 +138,7 @@ export async function POST(req: Request) {
       conversation = await prisma.conversation.create({
         data: {
           leadId: lead.id,
-          instanceId: instance?.id || null,
+          instanceId: instance?.id ?? null,
           remoteJid,
           channel: "whatsapp",
           lastMessageAt: new Date(),

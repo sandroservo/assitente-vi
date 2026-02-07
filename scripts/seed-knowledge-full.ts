@@ -382,6 +382,19 @@ Após assinar, já pode usar!`,
     keywords: "assinar, comprar, checkout, cadastro, contratar",
     priority: 9,
   },
+  {
+    category: "links",
+    title: "Links de Checkout (assinar por plano)",
+    content: `Links diretos para assinar cada plano:
+
+Plano Rotina: https://amovidas.com.br/checkout/plano-rotina
+Plano Especializado: https://amovidas.com.br/checkout/plano-especializado
+Cobertura Total: https://amovidas.com.br/checkout/cobertura-total
+
+Quando o lead pedir "link para comprar/assinar" ou "link do plano X para assinar", use o link de checkout do plano correspondente. Para ver benefícios do plano, use os links de benefícios (plano-rotina, plano-especializado, cobertura-total em /beneficios/).`,
+    keywords: "checkout, assinar, comprar, link direto, cadastro plano",
+    priority: 9,
+  },
 
   // === LOCAIS ===
   {

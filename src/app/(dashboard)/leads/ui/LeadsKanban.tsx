@@ -3,13 +3,18 @@
  * Site: https://cloudservo.com.br
  * 
  * Componente Kanban de Leads estilo Amo Vidas
+ * Com busca, abas, edição e exclusão
+ * Aprimorado: Resumo, Prioridade, Tempo na Etapa, Origem, Responsável
  */
 
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import Link from "next/link";
-import { MessageSquare, Phone, Loader2 } from "lucide-react";
+import {
+  MessageSquare, Phone, Loader2, Search, Pencil, Trash2, X, Tag as TagIcon,
+  ArrowUp, ArrowDown, Minus, Clock, Instagram, Send, User, MessageCircle
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DragDropContext,
@@ -18,6 +23,17 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface Responsible {
+  name: string | null;
+  avatar: string | null;
+}
+
 interface Lead {
   id: string;
   name: string | null;
@@ -25,8 +41,15 @@ interface Lead {
   phone: string;
   status: string;
   ownerType: string;
+  category: string;
+  summary: string | null;
+  priority: string; // low, medium, high
+  source: string; // whatsapp, instagram, manual
+  updatedAt: string;
   createdAt: string;
   conversationId: string | null;
+  tags: Tag[];
+  responsible: Responsible | null;
 }
 
 interface LeadsKanbanProps {
@@ -35,65 +58,73 @@ interface LeadsKanbanProps {
 }
 
 const COLUMNS = [
-  { 
-    id: "NOVO", 
-    title: "Novo", 
-    bgColor: "bg-pink-50", 
+  {
+    id: "NOVO",
+    title: "Novo",
+    bgColor: "bg-pink-50",
     headerBg: "bg-pink-100",
     borderColor: "border-pink-200",
     badgeColor: "bg-pink-500"
   },
-  { 
-    id: "EM_ATENDIMENTO", 
-    title: "Em Atendimento", 
-    bgColor: "bg-orange-50", 
+  {
+    id: "EM_ATENDIMENTO",
+    title: "Em Atendimento",
+    bgColor: "bg-orange-50",
     headerBg: "bg-orange-100",
     borderColor: "border-orange-200",
     badgeColor: "bg-orange-500"
   },
-  { 
-    id: "QUALIFICADO", 
-    title: "Qualificado", 
-    bgColor: "bg-blue-50", 
+  {
+    id: "QUALIFICADO",
+    title: "Qualificado",
+    bgColor: "bg-blue-50",
     headerBg: "bg-blue-100",
     borderColor: "border-blue-200",
     badgeColor: "bg-blue-500"
   },
-  { 
-    id: "FECHADO", 
-    title: "Fechado", 
-    bgColor: "bg-green-50", 
+  {
+    id: "FECHADO",
+    title: "Fechado",
+    bgColor: "bg-green-50",
     headerBg: "bg-green-100",
     borderColor: "border-green-200",
     badgeColor: "bg-green-500"
   },
-  { 
-    id: "PERDIDO", 
-    title: "Perdido", 
-    bgColor: "bg-red-50", 
+  {
+    id: "PERDIDO",
+    title: "Perdido",
+    bgColor: "bg-red-50",
     headerBg: "bg-red-100",
     borderColor: "border-red-200",
     badgeColor: "bg-red-500"
   },
-  { 
-    id: "LEAD_FRIO", 
-    title: "Lead Frio", 
-    bgColor: "bg-slate-50", 
+  {
+    id: "LEAD_FRIO",
+    title: "Lead Frio",
+    bgColor: "bg-slate-50",
     headerBg: "bg-slate-100",
     borderColor: "border-slate-200",
     badgeColor: "bg-slate-500"
   },
-  { 
-    id: "HUMANO_SOLICITADO", 
-    title: "Aguardando Humano", 
-    bgColor: "bg-yellow-50", 
+  {
+    id: "HUMANO_SOLICITADO",
+    title: "Aguardando Humano",
+    bgColor: "bg-yellow-50",
     headerBg: "bg-yellow-100",
     borderColor: "border-yellow-200",
     badgeColor: "bg-yellow-500"
   },
 ];
 
-const POLLING_INTERVAL = 5000;
+const CATEGORIES = [
+  { id: "todos", label: "Todos" },
+  { id: "geral", label: "Geral" },
+  { id: "rotina", label: "Cliente Rotina" },
+  { id: "especializado", label: "Cliente Especializado" },
+  { id: "cobertura_total", label: "Cliente Cobertura Total" },
+];
+
+const POLLING_INTERVAL = 30000; // 30 segundos
 
 const PAGE_SIZE = 20;
 
@@ -101,38 +132,73 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("todos");
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const columnScrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const columnSentinelRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [mounted, setMounted] = useState(false);
-  useLayoutEffect(() => setMounted(true), []);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const leadsLengthRef = useRef(initialLeads.length);
+  const isFirstRender = useRef(true);
+  const fetchLeadsRef = useRef<((replace?: boolean) => Promise<void>) | null>(null);
+  const loadMoreRef = useRef<(() => Promise<void>) | null>(null);
+  useEffect(() => { leadsLengthRef.current = leads.length; }, [leads.length]);
+  useEffect(() => setMounted(true), []);
 
-  const fetchLeads = useCallback(async (replace = true) => {
+  const fetchLeads = useCallback(async (replace = true, search = searchQuery, category = activeCategory) => {
     try {
-      const skip = replace ? 0 : leads.length;
-      const take = replace ? Math.max(leads.length, PAGE_SIZE) : PAGE_SIZE;
-      const res = await fetch(`/api/leads?skip=${skip}&take=${take}`);
+      const currentLength = leadsLengthRef.current;
+      const skip = replace ? 0 : currentLength;
+      const take = replace ? Math.max(currentLength, PAGE_SIZE) : PAGE_SIZE;
+      const params = new URLSearchParams({
+        skip: String(skip),
+        take: String(take),
+      });
+      if (search) params.set("search", search);
+      if (category && category !== "todos") params.set("category", category);
+
+      const res = await fetch(`/api/leads?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         if (replace) {
           setLeads(data.leads);
         } else {
-          setLeads((prev) => [...prev, ...data.leads]);
+          setLeads((prev) => {
+            const existingIds = new Set(prev.map((l) => l.id));
+            const newLeads = data.leads.filter((l: Lead) => !existingIds.has(l.id));
+            return [...prev, ...newLeads];
+          });
         }
         setHasMore(data.hasMore ?? false);
       }
     } catch (error) {
       console.error("Erro ao buscar leads:", error);
     }
-  }, [leads.length]);
+  }, [searchQuery, activeCategory]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const res = await fetch(`/api/leads?skip=${leads.length}&take=${PAGE_SIZE}`);
+      const params = new URLSearchParams({
+        skip: String(leadsLengthRef.current),
+        take: String(PAGE_SIZE),
+      });
+      if (searchQuery) params.set("search", searchQuery);
+      if (activeCategory && activeCategory !== "todos") params.set("category", activeCategory);
+
+      const res = await fetch(`/api/leads?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setLeads((prev) => [...prev, ...data.leads]);
+        setLeads((prev) => {
+            const existingIds = new Set(prev.map((l) => l.id));
+            const newLeads = data.leads.filter((l: Lead) => !existingIds.has(l.id));
+            return [...prev, ...newLeads];
+          });
         setHasMore(data.hasMore ?? false);
       }
     } catch (error) {
@@ -140,13 +206,36 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
     } finally {
       setLoadingMore(false);
     }
-  }, [leads.length, hasMore, loadingMore]);
+  }, [hasMore, loadingMore, searchQuery, activeCategory]);
 
+  // Mantém refs atualizadas para evitar recriação de intervals/observers
+  useEffect(() => { fetchLeadsRef.current = fetchLeads; }, [fetchLeads]);
+  useEffect(() => { loadMoreRef.current = loadMore; }, [loadMore]);
+
+  // Debounced search — pula o primeiro render (já temos initialLeads)
   useEffect(() => {
-    const interval = setInterval(() => fetchLeads(true), POLLING_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchLeads]);
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchLeads(true, searchQuery, activeCategory);
+    }, 300);
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [searchQuery, activeCategory]);
 
+  // Polling estável — usa ref para não recriar o interval
+  useEffect(() => {
+    const interval = setInterval(() => fetchLeadsRef.current?.(true), POLLING_INTERVAL);
+    return () => clearInterval(interval);
+  }, []);
+
+  // IntersectionObserver estável — usa ref para não recriar observers
   useEffect(() => {
     if (!mounted) return;
     const observers: IntersectionObserver[] = [];
@@ -156,7 +245,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
       if (!root || !sentinel) return;
       const observer = new IntersectionObserver(
         (entries) => {
-          if (entries[0]?.isIntersecting) loadMore();
+          if (entries[0]?.isIntersecting) loadMoreRef.current?.();
         },
         { root, rootMargin: "200px", threshold: 0 }
       );
@@ -164,7 +253,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
       observers.push(observer);
     });
     return () => observers.forEach((o) => o.disconnect());
-  }, [loadMore, mounted]);
+  }, [mounted]);
 
   const getLeadsByStatus = (status: string) => {
     return leads.filter((lead) => lead.status === status);
@@ -187,6 +276,52 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
     }
   };
 
+  const handleDeleteLead = async () => {
+    if (!deletingLead) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/leads/${deletingLead.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setLeads((prev) => prev.filter((l) => l.id !== deletingLead.id));
+        setDeletingLead(null);
+      }
+    } catch (error) {
+      console.error("Erro ao excluir lead:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleSaveLead = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingLead) return;
+    setIsSaving(true);
+    const formData = new FormData(e.currentTarget);
+    try {
+      const res = await fetch(`/api/leads/${editingLead.id}/update`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.get("name"),
+          category: formData.get("category"),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLeads((prev) =>
+          prev.map((l) => (l.id === editingLead.id ? { ...l, ...data.lead } : l))
+        );
+        setEditingLead(null);
+      }
+    } catch (error) {
+      console.error("Erro ao salvar lead:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -200,16 +335,16 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
 
     setLeads((prev) => {
       const newLeads = [...prev];
-      
+
       const sourceLeads = newLeads.filter((l) => l.status === source.droppableId);
       const movedLead = sourceLeads[source.index];
-      
+
       if (!movedLead) return prev;
 
       const updatedLead = { ...movedLead, status: destination.droppableId };
 
       const withoutMoved = newLeads.filter((l) => l.id !== draggableId);
-      
+
       const destLeads = withoutMoved.filter((l) => l.status === destination.droppableId);
       const otherLeads = withoutMoved.filter((l) => l.status !== destination.droppableId);
 
@@ -223,179 +358,376 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }) + " às " + date.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
+  // Helpers de Visualização
   const formatPhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, "");
-    
-    // Formato brasileiro: (11) 99999-9999 ou (11) 9999-9999
     if (cleaned.startsWith("55") && cleaned.length >= 12) {
       const ddd = cleaned.slice(2, 4);
       const rest = cleaned.slice(4);
-      if (rest.length === 9) {
-        return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
-      }
-      return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+      return rest.length === 9
+        ? `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`
+        : `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
     }
-    
-    // Sem código do país
-    if (cleaned.length === 11) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-    }
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
-    }
-    
+    if (cleaned.length === 11) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    if (cleaned.length === 10) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
     return phone;
   };
 
+  const getTimeInStage = (updatedAt: string) => {
+    const diff = Date.now() - new Date(updatedAt).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d`;
+    if (hours > 0) return `${hours}h`;
+    return `${minutes}m`;
+  };
+
+  const getPriorityInfo = (priority: string) => {
+    switch (priority) {
+      case "high": return { icon: ArrowUp, color: "text-red-500 bg-red-50" };
+      case "low": return { icon: ArrowDown, color: "text-green-500 bg-green-50" };
+      default: return { icon: Minus, color: "text-yellow-500 bg-yellow-50" };
+    }
+  };
+
+  const getSourceIcon = (source: string) => {
+    switch (source) {
+      case "whatsapp": return <MessageCircle className="w-3 h-3" />;
+      case "instagram": return <Instagram className="w-3 h-3" />;
+      default: return <User className="w-3 h-3" />;
+    }
+  };
+
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="grid grid-cols-7 gap-2 pb-4 min-h-0">
-        {COLUMNS.map((column) => {
-          const columnLeads = getLeadsByStatus(column.id);
-          return (
-            <div
-              key={column.id}
+    <>
+      {/* Barra de busca e abas */}
+      <div className="mb-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex gap-2 flex-wrap">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
               className={cn(
-                "rounded-xl border min-w-0 flex flex-col",
-                column.bgColor,
-                column.borderColor
+                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                activeCategory === cat.id
+                  ? "bg-[#FE3E6E] text-white shadow-md"
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-pink-300 hover:text-pink-600"
               )}
             >
-              {/* Header da coluna */}
-              <div
-                className={cn(
-                  "px-4 py-3 rounded-t-xl flex items-center justify-between shrink-0",
-                  column.headerBg
-                )}
-              >
-                <h3 className="font-semibold text-gray-800">{column.title}</h3>
-                <span
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nome ou telefone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none transition-all text-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!mounted ? (
+        <div className="flex items-center justify-center p-12 text-gray-400">
+          <Loader2 className="w-8 h-8 animate-spin mr-2" />
+          <span className="text-lg">Carregando Kanban...</span>
+        </div>
+      ) : (
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid grid-cols-7 gap-2 pb-4 min-h-0">
+            {COLUMNS.map((column) => {
+              const columnLeads = getLeadsByStatus(column.id);
+              return (
+                <div
+                  key={column.id}
                   className={cn(
-                    "text-white text-sm font-medium px-2.5 py-0.5 rounded-full",
-                    column.badgeColor
+                    "rounded-xl border min-w-0 flex flex-col",
+                    column.bgColor,
+                    column.borderColor
                   )}
                 >
-                  {columnLeads.length}
-                </span>
-              </div>
+                  <div className={cn(
+                    "px-4 py-3 rounded-t-xl flex items-center justify-between shrink-0",
+                    column.headerBg
+                  )}>
+                    <h3 className="font-semibold text-gray-800">{column.title}</h3>
+                    <span className={cn(
+                      "text-white text-sm font-medium px-2.5 py-0.5 rounded-full",
+                      column.badgeColor
+                    )}>
+                      {columnLeads.length}
+                    </span>
+                  </div>
 
-              {/* Área rolável dos cards (scroll infinito por coluna) */}
-              <div
-                ref={(el) => { columnScrollRefs.current[column.id] = el; }}
-                className="overflow-y-auto max-h-[calc(100vh-200px)] min-h-[120px] flex-1 scrollbar-hide"
-              >
-                <Droppable droppableId={column.id}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={cn(
-                        "p-3 space-y-3 min-h-[100px] transition-colors",
-                        snapshot.isDraggingOver && "bg-opacity-70"
-                      )}
-                    >
-                      {columnLeads.length === 0 && !snapshot.isDraggingOver ? (
-                        <div className="text-center py-8 text-gray-400 text-sm">
-                          Nenhum lead
-                        </div>
-                      ) : (
-                        columnLeads.map((lead, index) => (
-                        <Draggable
-                          key={lead.id}
-                          draggableId={lead.id}
-                          index={index}
-                        >
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={cn(
-                                "bg-white rounded-lg p-3 shadow-sm border border-gray-100 transition-shadow cursor-grab active:cursor-grabbing",
-                                snapshot.isDragging
-                                  ? "shadow-lg ring-2 ring-pink-300"
-                                  : "hover:shadow-md"
-                              )}
-                            >
-                              {/* Nome */}
-                              <h4 className="font-medium text-gray-800 truncate mb-2">
-                                {lead.name || lead.pushName || "Sem nome"}
-                              </h4>
-
-                              {/* Telefone */}
-                              <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                                <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                  <Phone className="w-3 h-3 text-white" />
-                                </div>
-                                <span>{formatPhone(lead.phone)}</span>
-                              </div>
-
-                              {/* Data */}
-                              <div className="text-xs text-gray-400 mb-3">
-                                {formatDate(lead.createdAt)}
-                              </div>
-
-                              {/* Tags */}
-                              <div className="flex items-center gap-2 mb-3">
-                                <span
-                                  className={cn(
-                                    "text-xs px-2 py-0.5 rounded-full",
-                                    lead.ownerType === "human"
-                                      ? "bg-indigo-100 text-indigo-700"
-                                      : "bg-pink-100 text-pink-700"
-                                  )}
-                                >
-                                  {lead.ownerType === "human" ? "Humano" : "Bot"}
-                                </span>
-                              </div>
-
-                              {/* Ações */}
-                              {lead.conversationId && (
-                                <Link href={`/inbox/${lead.conversationId}`}>
-                                  <button className="w-full bg-[#FE3E6E] hover:bg-[#C24695] text-white text-sm py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                                    <MessageSquare className="w-4 h-4" />
-                                    Ver conversa
-                                  </button>
-                                </Link>
-                              )}
-                            </div>
+                  <div
+                    ref={(el) => { columnScrollRefs.current[column.id] = el; }}
+                    className="overflow-y-auto max-h-[calc(100vh-250px)] min-h-[120px] flex-1 scrollbar-hide"
+                  >
+                    <Droppable droppableId={column.id}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={cn(
+                            "p-3 space-y-3 min-h-[100px] transition-colors",
+                            snapshot.isDraggingOver && "bg-opacity-70"
                           )}
-                        </Draggable>
-                      ))
+                        >
+                          {columnLeads.length === 0 && !snapshot.isDraggingOver ? (
+                            <div className="text-center py-8 text-gray-400 text-sm">
+                              Nenhum lead
+                            </div>
+                          ) : (
+                            columnLeads.map((lead, index) => {
+                              const PriorityIcon = getPriorityInfo(lead.priority).icon;
+
+                              return (
+                                <Draggable
+                                  key={lead.id}
+                                  draggableId={lead.id}
+                                  index={index}
+                                >
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className={cn(
+                                        "bg-white rounded-lg p-3 shadow-sm border border-gray-100 transition-shadow cursor-grab active:cursor-grabbing group relative",
+                                        snapshot.isDragging
+                                          ? "shadow-lg ring-2 ring-pink-300"
+                                          : "hover:shadow-md"
+                                      )}
+                                    >
+                                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingLead(lead);
+                                          }}
+                                          className="p-1.5 rounded-md bg-gray-100 hover:bg-blue-100 text-gray-500 hover:text-blue-600 transition-colors"
+                                        >
+                                          <Pencil className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeletingLead(lead);
+                                          }}
+                                          className="p-1.5 rounded-md bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+
+                                      {/* Header: Prioridade + Nome + Avatar Responsável */}
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2 overflow-hidden">
+                                          <div className={cn("p-1 rounded-full shrink-0", getPriorityInfo(lead.priority).color)}>
+                                            <PriorityIcon className="w-3 h-3" />
+                                          </div>
+                                          <h4 className="font-medium text-gray-800 truncate text-sm">
+                                            {lead.name || lead.pushName || "Sem nome"}
+                                          </h4>
+                                        </div>
+
+                                        {lead.responsible && (
+                                          <div className="w-6 h-6 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center shrink-0 overflow-hidden text-[10px] font-bold text-gray-500" title={lead.responsible.name || "Responsável"}>
+                                            {lead.responsible.avatar ? (
+                                              <img src={lead.responsible.avatar} alt="R" className="w-full h-full object-cover" />
+                                            ) : (
+                                              (lead.responsible.name?.[0] || "?").toUpperCase()
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Resumo */}
+                                      {lead.summary && (
+                                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                                          {lead.summary}
+                                        </p>
+                                      )}
+
+                                      {/* Tags */}
+                                      {lead.tags && lead.tags.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mb-2">
+                                          {lead.tags.slice(0, 3).map((tag) => (
+                                            <span
+                                              key={tag.id}
+                                              className="w-2 h-2 rounded-full"
+                                              style={{ backgroundColor: tag.color }}
+                                              title={tag.name}
+                                            />
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {/* Footer: Origem + Telefone + Tempo na Etapa */}
+                                      <div className="flex items-center justify-between text-xs text-gray-400 mt-1 pt-2 border-t border-gray-50">
+                                        <div className="flex items-center gap-2">
+                                          {getSourceIcon(lead.source)}
+                                          <span>{formatPhone(lead.phone)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <Clock className="w-3 h-3" />
+                                          <span>{getTimeInStage(lead.updatedAt)}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Link para conversa (área clicável transparente para não interferir no drag) */}
+                                      {lead.conversationId && (
+                                        <Link href={`/inbox/${lead.conversationId}`} className="absolute inset-x-0 bottom-0 top-12 z-0" />
+                                      )}
+                                    </div>
+                                  )}
+                                </Draggable>
+                              );
+                            })
+                          )}
+                          {provided.placeholder}
+                          <div
+                            ref={(el) => { columnSentinelRefs.current[column.id] = el; }}
+                            className="flex justify-center items-center py-4 min-h-[48px]"
+                          >
+                            {loadingMore && (
+                              <Loader2 className="w-5 h-5 animate-spin text-pink-500" />
+                            )}
+                            {!hasMore && leads.length > 0 && !loadingMore && (
+                              <p className="text-xs text-gray-400">Todos carregados</p>
+                            )}
+                          </div>
+                        </div>
                       )}
-                      {provided.placeholder}
-                      {/* Sentinel: ao rolar até o fim dos cards desta coluna, carrega mais */}
-                      <div
-                        ref={(el) => { columnSentinelRefs.current[column.id] = el; }}
-                        className="flex justify-center items-center py-4 min-h-[48px]"
-                      >
-                        {loadingMore && (
-                          <Loader2 className="w-5 h-5 animate-spin text-pink-500" />
-                        )}
-                        {!hasMore && leads.length > 0 && !loadingMore && (
-                          <p className="text-xs text-gray-400">Todos carregados</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </Droppable>
+                    </Droppable>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </DragDropContext>
+      )}
+
+      {/* Modal de Edição */}
+      {editingLead && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-800">Editar Lead</h2>
+              <button
+                onClick={() => setEditingLead(null)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveLead} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  defaultValue={editingLead.name || editingLead.pushName || ""}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none"
+                  placeholder="Nome do contato"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Telefone
+                </label>
+                <input
+                  type="text"
+                  value={formatPhone(editingLead.phone)}
+                  disabled
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Categoria
+                </label>
+                <select
+                  name="category"
+                  defaultValue={editingLead.category || "geral"}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none"
+                >
+                  <option value="geral">Geral</option>
+                  <option value="rotina">Cliente Rotina</option>
+                  <option value="especializado">Cliente Especializado</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingLead(null)}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#FE3E6E] hover:bg-[#C24695] text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isSaving ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {deletingLead && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in-95">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">Excluir Lead?</h2>
+              <p className="text-gray-500 mb-6">
+                Tem certeza que deseja excluir <strong>{deletingLead.name || deletingLead.pushName || "este lead"}</strong>?
+                Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeletingLead(null)}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteLead}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isDeleting ? "Excluindo..." : "Excluir"}
+                </button>
               </div>
             </div>
-          );
-        })}
-      </div>
-    </DragDropContext>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

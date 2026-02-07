@@ -143,8 +143,8 @@ export async function generateAIResponse(
       botAskedName
     );
     
-    // Se extraiu um nome, atualiza o lead
-    if (extractedName) {
+    // Só atualiza o nome do lead se ele ainda não tiver nome (não sobrescreve durante a conversa)
+    if (extractedName && !context.leadName?.trim()) {
       await prisma.lead.update({
         where: { id: context.leadId },
         data: { name: extractedName },
@@ -433,17 +433,16 @@ export function detectLeadStatus(
     return "FECHADO";
   }
 
-  // EM_ATENDIMENTO - Primeiro: lead que trocou mensagens sai de NOVO
-  if (currentStatus === "NOVO" && messageHistory.length >= 2) {
-    return "EM_ATENDIMENTO";
-  }
-
-  // QUALIFICADO - Sinais de interesse real (só depois de estar em atendimento ou já qualificado)
+  // QUALIFICADO - Sinais de interesse (pode vir de NOVO ou EM_ATENDIMENTO)
   const qualifiedKeywords = [
     "quanto custa",
     "qual o preço",
     "qual o preco",
     "qual valor",
+    "qual o valor",
+    "quero saber o preço",
+    "quero saber o preco",
+    "quero saber o valor",
     "como funciona",
     "me explica",
     "tenho interesse",
@@ -457,16 +456,32 @@ export function detectLeadStatus(
     "me conta mais",
     "quais são os planos",
     "quais sao os planos",
+    "quais os planos",
+    "me fala dos planos",
     "tem desconto",
     "formas de pagamento",
     "como pago",
+    "quero assinar",
+    "quero contratar",
   ];
   const hasQualifiedSignal = qualifiedKeywords.some((k) => combined.includes(k));
   if (hasQualifiedSignal && currentStatus !== "FECHADO") {
-    // Só vai para QUALIFICADO se já estiver EM_ATENDIMENTO (ou já qualificado/fechado)
-    if (currentStatus === "EM_ATENDIMENTO" || currentStatus === "QUALIFICADO" || currentStatus === "PROPOSTA_ENVIADA" || currentStatus === "EM_NEGOCIACAO" || currentStatus === "AGUARDANDO_RESPOSTA") {
+    // QUALIFICADO: já está em atendimento OU é NOVO mas já respondeu (tem mensagens) e mostrou interesse
+    const canQualify =
+      currentStatus === "EM_ATENDIMENTO" ||
+      currentStatus === "QUALIFICADO" ||
+      currentStatus === "PROPOSTA_ENVIADA" ||
+      currentStatus === "EM_NEGOCIACAO" ||
+      currentStatus === "AGUARDANDO_RESPOSTA" ||
+      (currentStatus === "NOVO" && messageHistory.length >= 1);
+    if (canQualify) {
       return "QUALIFICADO";
     }
+  }
+
+  // EM_ATENDIMENTO - lead que trocou mensagens sai de NOVO (quando ainda não qualificou)
+  if (currentStatus === "NOVO" && messageHistory.length >= 2) {
+    return "EM_ATENDIMENTO";
   }
 
   // LEAD_FRIO - Sinais de lead esfriando

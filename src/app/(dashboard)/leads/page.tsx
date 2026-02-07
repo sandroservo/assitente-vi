@@ -4,8 +4,8 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { LeadsKanban } from "./ui";
 import { Heart } from "lucide-react";
+import { LeadsKanbanWrapper } from "./ui/LeadsKanbanWrapper";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +13,9 @@ const INITIAL_TAKE = 20;
 
 export default async function LeadsPage() {
   const leadsData = await prisma.lead.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { updatedAt: "desc" },
     include: {
+      tags: true,
       conversations: {
         take: 1,
         orderBy: { lastMessageAt: "desc" },
@@ -34,8 +35,15 @@ export default async function LeadsPage() {
     phone: lead.phone,
     status: lead.status,
     ownerType: lead.ownerType,
+    category: lead.category || "geral",
+    summary: lead.summary,
+    priority: lead.priority || "low",
+    source: lead.source || "whatsapp",
+    updatedAt: lead.updatedAt.toISOString(),
     createdAt: lead.createdAt.toISOString(),
     conversationId: lead.conversations[0]?.id ?? null,
+    tags: lead.tags.map(t => ({ id: t.id, name: t.name, color: t.color })),
+    responsible: null,
   }));
 
   return (
@@ -56,7 +64,7 @@ export default async function LeadsPage() {
       </div>
 
       {/* Kanban com scroll infinito */}
-      <LeadsKanban initialLeads={leads} initialHasMore={hasMore} />
+      <LeadsKanbanWrapper initialLeads={leads} initialHasMore={hasMore} />
     </div>
   );
 }

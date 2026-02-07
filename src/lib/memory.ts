@@ -156,45 +156,54 @@ export function formatMemoriesForAI(memories: LeadMemoryItem[]): string {
   return result;
 }
 
+// Palavras que não são nomes (evita extrair "Vi", "plano", "quanto custa", etc.)
+const NOT_NAME_WORDS = new Set([
+  "vi", "sim", "não", "nao", "oi", "ola", "ok", "então", "entao", "quanto", "custa", "qual", "valor",
+  "preço", "preco", "plano", "planos", "me", "explica", "explicar", "como", "funciona", "quero",
+  "saber", "mais", "pode", "gostaria", "tenho", "interesse", "informação", "informacao", "por", "favor",
+]);
+
 /**
- * Detecta se a mensagem contém um nome informado pelo cliente
- * Retorna o nome se detectado, null caso contrário
+ * Detecta se a mensagem contém um nome informado pelo cliente (resposta à pergunta "como posso te chamar?").
+ * Retorna o nome se detectado, null caso contrário. Não extrai frases que claramente não são nome.
  */
 export function extractNameFromMessage(message: string, previousBotAskedName: boolean): string | null {
   if (!previousBotAskedName) return null;
-  
+
   const trimmed = message.trim();
-  
-  // Se a mensagem é curta (1-3 palavras) e não contém números, provavelmente é um nome
-  const words = trimmed.split(/\s+/);
-  if (words.length <= 3 && words.length >= 1) {
-    // Verifica se não contém números ou caracteres especiais demais
-    const hasNumbers = /\d/.test(trimmed);
-    const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(trimmed);
-    
-    if (!hasNumbers && !hasSpecialChars) {
-      // Padrões comuns de resposta de nome
-      const namePatterns = [
-        /^(?:me\s*)?(?:chama?|chamar?)?\s*(?:de\s+)?(.+)$/i,
-        /^(?:meu\s+nome\s+(?:é|e)\s+)?(.+)$/i,
-        /^(?:pode\s+(?:me\s+)?chamar\s+(?:de\s+)?)?(.+)$/i,
-        /^(?:sou\s+(?:o|a)\s+)?(.+)$/i,
-        /^(.+)$/i, // fallback: pega tudo se for curto
-      ];
-      
-      for (const pattern of namePatterns) {
-        const match = trimmed.match(pattern);
-        if (match && match[1]) {
-          const name = match[1].trim();
-          // Capitaliza primeira letra de cada palavra
-          return name.split(' ')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-            .join(' ');
-        }
-      }
+  if (trimmed.length > 40) return null; // Resposta longa não é só um nome
+
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length > 3 || words.length === 0) return null;
+
+  const hasNumbers = /\d/.test(trimmed);
+  const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(trimmed);
+  if (hasNumbers || hasSpecialChars) return null;
+
+  // Se alguma palavra é claramente não-nome, não considera como nome
+  const lowerWords = words.map((w) => w.toLowerCase());
+  if (lowerWords.some((w) => NOT_NAME_WORDS.has(w))) return null;
+
+  // Só aceita padrões explícitos de "me chamo X", "sou o X", etc. (sem fallback que pega qualquer coisa)
+  const namePatterns = [
+    /^(?:me\s+chamo|meu\s+nome\s+(?:é|e)|sou\s+(?:o|a))\s+([A-ZÀ-Úa-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú]+)?)$/i,
+    /^(?:pode\s+(?:me\s+)?chamar\s+(?:de\s+)?|chamo-me\s+)([A-ZÀ-Úa-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú]+)?)$/i,
+    /^([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)?)$/, // Só 1 ou 2 palavras capitalizadas (ex: "Sandro", "Maria Silva")
+  ];
+
+  for (const pattern of namePatterns) {
+    const match = trimmed.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      if (name.length < 2) return null;
+      if (NOT_NAME_WORDS.has(name.toLowerCase())) return null;
+      return name
+        .split(" ")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" ");
     }
   }
-  
+
   return null;
 }
 
