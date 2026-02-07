@@ -7,7 +7,9 @@
 
 import { NextResponse } from "next/server";
 import { prisma, LeadStatus } from "@/lib/prisma";
-import { evolutionSendText, evolutionSendTextHumanized, evolutionGetProfilePicture, evolutionGetMediaBase64 } from "@/lib/evolution";
+import { evolutionSendText, evolutionSendTextHumanized, evolutionSendMedia, evolutionGetProfilePicture, evolutionGetMediaBase64 } from "@/lib/evolution";
+import { readFile } from "fs/promises";
+import path from "path";
 import { transcribeAudio, describeImage } from "@/lib/media";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus } from "@/lib/ai";
 
@@ -258,6 +260,16 @@ export async function POST(req: Request) {
       messageHistory,
     });
     
+    // Cards dos planos disponíveis para envio automático
+    const PLAN_CARDS: { keywords: string[]; file: string; caption: string }[] = [
+      { keywords: ["plano rotina", "rotina", "r$ 37", "37,90", "37,00"], file: "exame_plano_ rotina.jpeg", caption: "Plano Rotina - Amo Vidas" },
+      { keywords: ["plano especializado", "especializado", "r$ 57", "57,90"], file: "exame_plano_ especializado.jpeg", caption: "Plano Especializado - Amo Vidas" },
+      { keywords: ["cobertura total", "r$ 97", "97,90"], file: "exame_plano_ cobertura_ total.jpeg", caption: "Plano Cobertura Total - Amo Vidas" },
+      { keywords: ["check-up", "checkup", "check up"], file: "checkups.jpeg", caption: "Check-ups - Amo Vidas" },
+      { keywords: ["especialidade", "especialidades"], file: "especialidades_dentro_dos_palnos.jpeg", caption: "Especialidades - Amo Vidas" },
+      { keywords: ["dependente", "dependentes", "familiar"], file: "planos_e_seu_dependentes.jpeg", caption: "Planos e Dependentes - Amo Vidas" },
+    ];
+
     try {
       // Envia mensagem de forma humanizada (com "digitando" e pausas)
       await evolutionSendTextHumanized({ number: phone, text: botResponse });
@@ -272,6 +284,43 @@ export async function POST(req: Request) {
           sentAt: new Date(),
         },
       });
+
+      // Detecta se a resposta menciona planos e envia o card correspondente
+      const responseLower = botResponse.toLowerCase();
+      const cardsToSend = PLAN_CARDS.filter((card) =>
+        card.keywords.some((kw) => responseLower.includes(kw))
+      ).slice(0, 2); // Máximo 2 cards por resposta
+
+      for (const card of cardsToSend) {
+        try {
+          const filePath = path.join(process.cwd(), "public", "cards", card.file);
+          const fileBuffer = await readFile(filePath);
+          const base64 = fileBuffer.toString("base64");
+
+          await evolutionSendMedia({
+            number: phone,
+            mediatype: "image",
+            media: base64,
+            mimetype: "image/jpeg",
+            caption: card.caption,
+            fileName: card.file,
+          });
+
+          await prisma.message.create({
+            data: {
+              conversationId: conversation.id,
+              direction: "out",
+              type: "image",
+              body: `[Imagem enviada: ${card.caption}]`,
+              sentAt: new Date(),
+            },
+          });
+
+          console.log(`[Bot] Card enviado: ${card.caption}`);
+        } catch (cardErr) {
+          console.error(`[Bot] Erro ao enviar card ${card.file}:`, cardErr);
+        }
+      }
 
       await prisma.conversation.update({
         where: { id: conversation.id },
