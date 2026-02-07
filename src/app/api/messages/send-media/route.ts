@@ -40,14 +40,12 @@ export async function POST(req: Request) {
     if (mime.startsWith("image/")) mediatype = "image";
     else if (mime.startsWith("video/")) mediatype = "video";
 
-    // Monta o data URI para a Evolution API
-    const dataUri = `data:${mimeType || "application/octet-stream"};base64,${base64}`;
-
     try {
       await evolutionSendMedia({
         number: convo.lead.phone,
         mediatype,
-        media: dataUri,
+        media: base64,
+        mimetype: mimeType || "application/octet-stream",
         caption: caption || undefined,
         fileName: fileName || undefined,
       });

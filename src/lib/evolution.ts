@@ -130,12 +130,14 @@ export async function evolutionSendMedia({
   number,
   mediatype,
   media,
+  mimetype,
   caption,
   fileName,
 }: {
   number: string;
   mediatype: "image" | "document" | "video";
-  media: string; // base64 data URI ou URL pública
+  media: string; // base64 puro ou URL pública
+  mimetype?: string;
   caption?: string;
   fileName?: string;
 }) {
@@ -154,6 +156,7 @@ export async function evolutionSendMedia({
     mediatype,
     media,
   };
+  if (mimetype) body.mimetype = mimetype;
   if (caption) body.caption = caption;
   if (fileName) body.fileName = fileName;
 
