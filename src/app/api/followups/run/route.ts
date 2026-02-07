@@ -3,9 +3,11 @@
  * Site: https://cloudservo.com.br
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { evolutionSendText } from "@/lib/evolution";
+
+const CRON_SECRET = process.env.CRON_SECRET || "followup-runner-secret";
 
 const FOLLOWUP_MESSAGES: Record<number, string> = {
   1: "Oi! Só passando pra ver se você conseguiu pensar sobre os planos do Amo Vidas 🙂",
@@ -14,7 +16,14 @@ const FOLLOWUP_MESSAGES: Record<number, string> = {
   4: "Última mensagem por aqui! Se quiser retomar depois, é só me chamar. Cuide-se! 🌟",
 };
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  // Proteção: só aceita chamadas com token secreto ou localhost
+  const authHeader = req.headers.get("authorization");
+  const isLocalhost = req.headers.get("host")?.includes("127.0.0.1") || req.headers.get("host")?.includes("localhost");
+  
+  if (!isLocalhost && authHeader !== `Bearer ${CRON_SECRET}`) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
   try {
     const due = await prisma.followUp.findMany({
       where: {
