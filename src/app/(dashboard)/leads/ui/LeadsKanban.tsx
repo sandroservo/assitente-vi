@@ -45,6 +45,7 @@ interface Lead {
   summary: string | null;
   priority: string; // low, medium, high
   source: string; // whatsapp, instagram, manual
+  leadScore: number;
   updatedAt: string;
   createdAt: string;
   conversationId: string | null;
@@ -73,6 +74,14 @@ const COLUMNS = [
     headerBg: "bg-orange-100",
     borderColor: "border-orange-200",
     badgeColor: "bg-orange-500"
+  },
+  {
+    id: "CONSCIENTIZADO",
+    title: "Conscientizado",
+    bgColor: "bg-cyan-50",
+    headerBg: "bg-cyan-100",
+    borderColor: "border-cyan-200",
+    badgeColor: "bg-cyan-500"
   },
   {
     id: "QUALIFICADO",
@@ -448,7 +457,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
         </div>
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-7 gap-2 pb-4 min-h-0">
+          <div className="grid grid-cols-8 gap-2 pb-4 min-h-0">
             {COLUMNS.map((column) => {
               const columnLeads = getLeadsByStatus(column.id);
               return (
@@ -574,6 +583,29 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                                               title={tag.name}
                                             />
                                           ))}
+                                        </div>
+                                      )}
+
+                                      {/* Lead Score Badge */}
+                                      {lead.leadScore > 0 && (
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                          <div className={cn(
+                                            "text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white",
+                                            lead.leadScore >= 800 ? "bg-red-500" :
+                                            lead.leadScore >= 600 ? "bg-orange-500" :
+                                            lead.leadScore >= 400 ? "bg-yellow-500" :
+                                            lead.leadScore >= 200 ? "bg-blue-400" :
+                                            "bg-gray-400"
+                                          )}>
+                                            {lead.leadScore}
+                                          </div>
+                                          <span className="text-[10px] text-gray-400">
+                                            {lead.leadScore >= 800 ? "🔥 Muito quente" :
+                                             lead.leadScore >= 600 ? "🔥 Quente" :
+                                             lead.leadScore >= 400 ? "🌡️ Morno" :
+                                             lead.leadScore >= 200 ? "❄️ Frio" :
+                                             "🥶 Muito frio"}
+                                          </span>
                                         </div>
                                       )}
 

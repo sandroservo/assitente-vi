@@ -129,6 +129,7 @@ model ExcludedContact {
 enum LeadStatus {
   NOVO
   EM_ATENDIMENTO
+  CONSCIENTIZADO
   QUALIFICADO
   LEAD_FRIO
   PROPOSTA_ENVIADA
@@ -166,6 +167,7 @@ model Lead {
   summary        String?
   priority       String     @default("low") // low, medium, high
   source         String     @default("whatsapp") // whatsapp, instagram, manual
+  leadScore      Int        @default(0) // Lead Score 0-1000
   lastMessageAt  DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt

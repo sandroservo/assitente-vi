@@ -19,6 +19,7 @@ interface Lead {
     summary: string | null;
     priority: string;
     source: string;
+    leadScore: number;
     updatedAt: string;
     createdAt: string;
     conversationId: string | null;

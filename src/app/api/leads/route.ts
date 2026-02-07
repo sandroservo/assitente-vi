@@ -76,6 +76,7 @@ export async function GET(req: Request) {
       summary: lead.summary,
       priority: lead.priority,
       source: lead.source,
+      leadScore: lead.leadScore ?? 0,
       updatedAt: lead.updatedAt.toISOString(),
       createdAt: lead.createdAt.toISOString(),
       conversationId: lead.conversations[0]?.id ?? null,

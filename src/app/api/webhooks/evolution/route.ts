@@ -12,6 +12,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { transcribeAudio, describeImage } from "@/lib/media";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus } from "@/lib/ai";
+import { updateLeadScore, getStatusFromScore } from "@/lib/lead-score";
 
 function phoneFromJid(remoteJid: string) {
   return remoteJid.split("@")[0];
@@ -327,19 +328,40 @@ export async function POST(req: Request) {
         data: { lastMessageAt: new Date(), unreadCount: 0 },
       });
 
-      // Detecta e atualiza status do lead baseado na conversa
+      // Calcula e persiste o Lead Score (0–1.000)
+      const scoreBreakdown = await updateLeadScore(lead.id, messageHistory, text ?? "");
+      console.log(`Lead ${lead.id} score: ${scoreBreakdown.total}/1000 (P:${scoreBreakdown.perfil} N:${scoreBreakdown.necessidade} C:${scoreBreakdown.consciencia} B:${scoreBreakdown.comportamento} D:${scoreBreakdown.decisao})`);
+
+      // Detecta status por keywords (prioridade: PERDIDO > FECHADO > etc.)
       const detectedStatus = detectLeadStatus(
         messageHistory,
         text ?? "",
         lead.status
       );
+
+      // Se keywords detectaram mudança, usa keyword; senão usa score para sugerir
+      let newStatus: string | null = detectedStatus;
+      if (!newStatus) {
+        const scoreStatus = getStatusFromScore(scoreBreakdown.total);
+        // Só avança pelo score (não regride), e não sobrescreve status manuais/especiais
+        const protectedStatuses = ["FECHADO", "PERDIDO", "HUMANO_SOLICITADO", "HUMANO_EM_ATENDIMENTO", "AGUARDANDO_RESPOSTA", "LEAD_FRIO"];
+        if (!protectedStatuses.includes(lead.status) && scoreStatus !== lead.status) {
+          // Score só avança: NOVO → EM_ATENDIMENTO → CONSCIENTIZADO → QUALIFICADO → EM_NEGOCIACAO
+          const statusOrder = ["NOVO", "EM_ATENDIMENTO", "CONSCIENTIZADO", "QUALIFICADO", "EM_NEGOCIACAO", "HUMANO_SOLICITADO"];
+          const currentIdx = statusOrder.indexOf(lead.status);
+          const newIdx = statusOrder.indexOf(scoreStatus);
+          if (newIdx > currentIdx) {
+            newStatus = scoreStatus;
+          }
+        }
+      }
       
-      if (detectedStatus && detectedStatus !== lead.status) {
+      if (newStatus && newStatus !== lead.status) {
         await prisma.lead.update({
           where: { id: lead.id },
-          data: { status: detectedStatus as LeadStatus },
+          data: { status: newStatus as LeadStatus },
         });
-        console.log(`Lead ${lead.id} status atualizado: ${lead.status} → ${detectedStatus}`);
+        console.log(`Lead ${lead.id} status atualizado: ${lead.status} → ${newStatus} (score: ${scoreBreakdown.total})`);
       }
     } catch (sendError) {
       console.error("Erro ao enviar resposta do bot:", sendError);

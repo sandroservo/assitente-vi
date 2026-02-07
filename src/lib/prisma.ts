@@ -15,6 +15,7 @@ export type TransactionClient = Omit<
 export type LeadStatus =
   | "NOVO"
   | "EM_ATENDIMENTO"
+  | "CONSCIENTIZADO"
   | "QUALIFICADO"
   | "LEAD_FRIO"
   | "PROPOSTA_ENVIADA"

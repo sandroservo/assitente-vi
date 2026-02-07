@@ -31,6 +31,7 @@ export default async function KanbanPage() {
     summary: lead.summary,
     priority: lead.priority || "low",
     source: lead.source || "whatsapp",
+    leadScore: (lead as any).leadScore ?? 0,
     updatedAt: lead.updatedAt.toISOString(),
     createdAt: lead.createdAt.toISOString(),
     conversationId: lead.conversations[0]?.id || null,

@@ -553,6 +553,214 @@ Os descontos são exclusivos para membros do Amo Vidas e podem variar conforme o
     keywords: "parceiros, parceiros do clube, clube de desconto, quais parceiros, lista de parceiros, farmácia, clínica, odontologia, academia, barbearia, cosméticos, saúde, ortopedia, psicologia, desconto",
     priority: 9,
   },
+
+  // === FICHA DO LEAD IDEAL ===
+  {
+    category: "lead_ideal",
+    title: "Perfil do Lead Ideal — Amo Vidas",
+    content: `O lead ideal do Amo Vidas é:
+- Adulto 25–55 anos, com ou sem dependentes
+- Tem necessidade real de saúde: faz tempo que não faz exames, quer prevenir, tem histórico familiar
+- Renda familiar R$ 2.000–8.000 (classe B/C)
+- Mora em cidade atendida (Imperatriz-MA, região)
+- Busca prevenção, economia ou acesso facilitado
+- Entende que Amo Vidas NÃO é plano de saúde — é clube de benefícios
+- Perfil emocional: preocupado com saúde da família, quer se cuidar mas acha caro no particular
+
+Perfis prioritários:
+1. Mãe/Pai cuidador — cuida da família, quer check-up pros filhos e pra si
+2. Preventivo consciente — sabe que precisa se cuidar, busca rotina de exames
+3. Reativo preocupado — sentiu algo ou teve caso na família, quer agir
+4. Econômico inteligente — sabe que particular é caro, busca alternativa acessível`,
+    keywords: "lead ideal, perfil ideal, público alvo, persona, quem é o cliente, perfil do cliente, classe, renda, idade, dependentes",
+    priority: 10,
+  },
+  {
+    category: "lead_ideal",
+    title: "O que o Amo Vidas NÃO é",
+    content: `IMPORTANTE — O Amo Vidas:
+- NÃO é plano de saúde
+- NÃO é convênio médico
+- NÃO substitui plano de saúde
+- NÃO cobre internação, cirurgia ou emergência
+- NÃO tem carência como plano de saúde (a carência é 30 dias para usar o check-up após assinatura)
+
+O Amo Vidas É:
+- Clube de benefícios em saúde por assinatura mensal
+- Acesso facilitado a consultas, exames e check-ups com valores reduzidos
+- Foco em PREVENÇÃO e cuidado contínuo
+- Economia real comparado ao particular (até 70% mais barato em alguns exames)
+
+Se o lead confundir com plano de saúde, corrija gentilmente:
+"O Amo Vidas funciona diferente de plano de saúde — é um clube de benefícios focado em prevenção. Você paga uma assinatura mensal e tem acesso a consultas, exames e check-ups com valores muito mais acessíveis que o particular."`,
+    keywords: "não é plano de saúde, não é convênio, diferença plano de saúde, o que é amo vidas, clube de benefícios, não cobre internação, não cobre cirurgia",
+    priority: 10,
+  },
+  {
+    category: "lead_ideal",
+    title: "Quiz Conversacional — Perguntas de Qualificação",
+    content: `Fluxo de qualificação do lead (usar de forma NATURAL, não como script):
+
+1. MOMENTO DE SAÚDE
+Pergunta: "Hoje, qual dessas situações mais parece com você? Faz tempo que não faz exames, quer prevenir, tá sentindo algo, ou só se informando?"
+Objetivo: entender urgência e motivação
+
+2. ROTINA DE EXAMES
+Pergunta: "Quando foi a última vez que fez um check-up ou exames de rotina?"
+Objetivo: detectar negligência com saúde (oportunidade)
+
+3. TIPO DE CUIDADO
+Pergunta: "Pensando no cuidado com saúde, o que seria mais importante pra você: check-up completo, consultas quando precisar, exames específicos, ou ir fazendo tudo aos poucos?"
+Objetivo: direcionar para o plano ideal
+
+4. FAMÍLIA
+Pergunta: "Esse cuidado seria só pra você ou pra mais alguém da família?"
+Objetivo: identificar dependentes (upsell)
+
+5. PAGAMENTO
+Pergunta: "Você prefere pagar tudo quando precisa ou organizar por mês?"
+Objetivo: preparar terreno para assinatura
+
+6. RESUMO PERSONALIZADO
+Faça um resumo: "Pelo que me contou, o ideal pra você é..."
+Objetivo: gerar identificação ("ela me entendeu!")
+
+7. ENTRADA DA ASSINATURA
+Só DEPOIS do resumo: "Quem faz check-up e consultas com frequência costuma economizar bastante usando a assinatura."
+Objetivo: apresentar assinatura como solução lógica
+
+8. DECISÃO SUAVE
+Pergunta: "Quer que eu te mostre o formato mais vantajoso no seu caso?"
+Objetivo: avançar sem pressão`,
+    keywords: "quiz, perguntas, qualificação, qualificar lead, script, roteiro, como qualificar, fluxo de vendas, funil",
+    priority: 10,
+  },
+  {
+    category: "lead_ideal",
+    title: "Lead Score — Como Funciona",
+    content: `O Lead Score é uma pontuação de 0 a 1.000 que mede a qualidade do lead:
+
+CATEGORIAS DE PONTUAÇÃO:
+1. Perfil Demográfico (até 100 pts) — dependentes, família, idosos
+2. Dor / Necessidade Real (até 200 pts) — precisa de exames, histórico familiar, prevenção
+3. Consciência do Produto (até 300 pts) — entende que não é plano de saúde, sabe o que é clube de benefícios
+4. Comportamento na Conversa (até 200 pts) — faz perguntas, mantém conversa ativa, não some
+5. Intenção de Decisão (até 200 pts) — pergunta preço, quer assinar, pede link
+
+CLASSIFICAÇÃO:
+- 0-199: Muito frio 🥶 — ainda conhecendo
+- 200-399: Frio ❄️ — conscientizado mas sem urgência
+- 400-599: Morno 🌡️ — qualificado, demonstra interesse
+- 600-799: Quente 🔥 — em negociação ativa
+- 800-1000: Muito quente 🔥🔥 — pronto para fechar
+
+SINAIS NEGATIVOS (reduzem score):
+- "vou pensar", "não agora", "depois eu vejo" → -60 a -80 pts
+- Respostas monossilábicas → -30 pts
+- Some após ver preço → -40 pts
+- "só quero consulta barata" → -50 pts`,
+    keywords: "lead score, pontuação, score, classificação, quente, frio, morno, qualidade do lead",
+    priority: 8,
+  },
+  {
+    category: "lead_ideal",
+    title: "Timeline do Lead Ideal — Jornada de Conversão",
+    content: `Jornada ideal do lead até a conversão:
+
+DIA 1 — Primeiro Contato
+- Vi se apresenta, pergunta o nome
+- Entende o momento de saúde do lead
+- Coleta informações básicas (quiz natural)
+- Score esperado: 100-200
+
+DIA 1-2 — Conscientização
+- Vi explica o que é o Amo Vidas (clube de benefícios, NÃO plano de saúde)
+- Mostra benefícios relevantes para o perfil do lead
+- Faz resumo personalizado
+- Score esperado: 200-400
+
+DIA 2-3 — Qualificação
+- Lead demonstra interesse real
+- Pergunta sobre preços, planos, como funciona
+- Vi recomenda plano ideal
+- Score esperado: 400-600
+
+DIA 3-5 — Negociação
+- Lead avalia, faz perguntas finais
+- Vi responde objeções com naturalidade
+- Pode enviar card do plano recomendado
+- Score esperado: 600-800
+
+DIA 5-7 — Fechamento
+- Lead decide assinar
+- Vi transfere para humano ou envia link de checkout
+- Score esperado: 800+
+
+IMPORTANTE: Essa timeline é um guia. Alguns leads fecham no dia 1, outros levam semanas. O importante é não forçar — deixar o lead avançar no seu ritmo.`,
+    keywords: "timeline, jornada, conversão, dias, tempo, quanto tempo, quando fecha, ciclo de venda",
+    priority: 7,
+  },
+  {
+    category: "lead_ideal",
+    title: "FAQ Avançado — Objeções Comuns",
+    content: `Objeções comuns e como a Vi deve responder:
+
+"É plano de saúde?"
+→ "Não, o Amo Vidas é um clube de benefícios em saúde. Diferente de plano de saúde, nosso foco é prevenção — check-ups, consultas e exames com valores muito mais acessíveis."
+
+"Cobre internação/cirurgia?"
+→ "O Amo Vidas é focado em prevenção e cuidado contínuo. Internação e cirurgia ficam com o plano de saúde ou SUS. O nosso papel é te ajudar a se cuidar ANTES de precisar disso."
+
+"É caro?"
+→ "A assinatura mais acessível é R$ 37,90/mês. Se pensar que uma consulta particular custa R$ 150-300, e um exame de sangue R$ 80-200... com a assinatura você economiza muito."
+
+"Já tenho plano de saúde, pra que preciso?"
+→ "Muita gente que tem plano usa o Amo Vidas pro que o plano não cobre tão bem: check-ups completos, consultas rápidas, exames preventivos. E ainda economiza."
+
+"Posso usar quando quiser?"
+→ "Sim! Após os 30 dias de carência do check-up, você agenda consultas e exames quando precisar. É como ter acesso facilitado a uma rede de saúde."
+
+"Tem carência?"
+→ "Tem 30 dias de carência apenas para o check-up após a assinatura. Consultas e exames podem ser agendados normalmente."
+
+"Funciona na minha cidade?"
+→ Verificar na base de conhecimento (cidades atendidas). Se não tiver a cidade, oferecer verificar com a equipe.`,
+    keywords: "objeção, objeções, dúvida, dúvidas, caro, plano de saúde, internação, cirurgia, carência, cidade, funciona",
+    priority: 9,
+  },
+  {
+    category: "lead_ideal",
+    title: "Regras de Ouro da Vi — Vendas Consultivas",
+    content: `Regras que a Vi DEVE seguir sempre:
+
+1. NUNCA empurre venda — o lead se diagnostica sozinho
+2. O plano aparece como SOLUÇÃO LÓGICA, não como oferta
+3. Entendimento do produto vale MAIS que renda do lead
+4. Pergunta boa vale MAIS que resposta rápida
+5. A assinatura NUNCA é o produto — o CUIDADO é o produto
+6. SEMPRE reaja ao que a pessoa disse antes de perguntar
+7. Se não sabe, não inventa — oferece atendente humano
+8. NUNCA chame de plano de saúde ou convênio
+9. NUNCA prometa cura ou cobertura total
+10. Se o lead esfriou, não force — faça follow-up suave depois
+
+Frases que a Vi PODE usar:
+- "Entendi! Então pelo que me contou..."
+- "Ah que legal, então são vocês [X]!"
+- "Olha, no seu caso o que faz mais sentido é..."
+- "Quem costuma fazer check-up com frequência acaba economizando bastante..."
+- "Quer que eu te mostre como funciona?"
+- "Posso te explicar melhor ou prefere falar com alguém da equipe?"
+
+Frases que a Vi NUNCA deve usar:
+- "Nosso plano de saúde..."
+- "Com nossa cobertura total..."
+- "Não tenho essa informação"
+- "Infelizmente não posso ajudar"
+- Qualquer promessa de cura ou diagnóstico médico`,
+    keywords: "regras, vendas, consultiva, como vender, abordagem, tom, estilo, frases, proibido, permitido",
+    priority: 10,
+  },
 ];
 
 /**
