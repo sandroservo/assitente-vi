@@ -32,7 +32,7 @@ export async function transcribeAudio(
   if (!openai) return null;
 
   try {
-    const format = mimeType?.split("/")[1] ?? "ogg";
+    const format = (mimeType?.split("/")[1]?.split(";")[0]?.trim()) ?? "ogg";
     const buffer = Buffer.from(base64, "base64");
     const tmpPath = path.join(os.tmpdir(), `whisper-${Date.now()}.${format}`);
     fs.writeFileSync(tmpPath, buffer);
