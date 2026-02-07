@@ -408,9 +408,33 @@ Quando o lead pedir "link para comprar/assinar" ou "link do plano X para assinar
 - Açailândia-MA
 - Abel Figueiredo-PA
 
-Região: Imperatriz-MA (raio ~100 km)`,
+Região: Imperatriz-MA (raio ~100 km)
+
+IMPORTANTE: Se o cliente NÃO mora em nenhuma dessas cidades, a Vi deve informar com empatia que por enquanto o atendimento presencial (exames e consultas) está disponível apenas nessas regiões.`,
     keywords: "cidade, Imperatriz, Açailândia, Maranhão, Pará, atendimento",
     priority: 8,
+  },
+  {
+    category: "atendimento",
+    title: "Cliente fora da área de atendimento",
+    content: `REGRA IMPORTANTE: Se o cliente informar que mora em uma cidade que NÃO está na lista de cidades atendidas (Imperatriz-MA, São Pedro da Água Branca-MA, Vila Nova dos Martírios-MA, Açailândia-MA, Abel Figueiredo-PA), siga estas orientações:
+
+1. ACOLHA com empatia: "Poxa, que pena! Infelizmente ainda não temos atendimento presencial aí na sua cidade."
+
+2. EXPLIQUE que o Amo Vidas está em expansão: "Mas a gente tá crescendo e em breve queremos chegar em mais cidades!"
+
+3. OFEREÇA alternativas:
+   - Pergunte se o cliente tem interesse mesmo assim, pois ele pode usar quando estiver de passagem pela região.
+   - Informe que pode deixar o contato dele registrado para ser avisado quando o Amo Vidas chegar na cidade dele.
+
+4. NUNCA diga simplesmente "não atendemos" e encerre. Sempre mantenha a conversa aberta e acolhedora.
+
+5. Se o cliente insistir ou quiser saber mais mesmo assim, continue apresentando os planos normalmente — ele pode querer assinar para usar quando visitar a região ou para familiares que moram lá.
+
+Exemplo de resposta:
+"Ah, entendi! Infelizmente por enquanto nosso atendimento presencial (exames e consultas) tá disponível em Imperatriz, Açailândia, São Pedro da Água Branca, Vila Nova dos Martírios e Abel Figueiredo. Mas a gente tá em expansão! 💜 Se quiser, posso anotar seu interesse pra te avisar quando chegarmos aí. E se você tiver familiares nessas cidades ou vier visitar a região, já pode aproveitar os benefícios!"`,
+    keywords: "fora, outra cidade, não atende, longe, distante, mora em, sou de, moro em, região, expansão, não tem, disponível",
+    priority: 10,
   },
   {
     category: "atendimento",
