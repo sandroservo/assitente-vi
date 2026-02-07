@@ -55,7 +55,7 @@ export function Sidebar() {
       <div className={cn("border-b border-gray-100 flex shrink-0", collapsed ? "p-2 justify-center" : "p-5 justify-center")}>
         <Link href="/" className={collapsed ? "flex justify-center w-10 h-10" : "flex justify-center"}>
           <Image
-            src="/assets/logo.webp"
+            src="/assets/logo_amovidas.webp"
             alt="Amo Vidas"
             width={collapsed ? 40 : 140}
             height={collapsed ? 40 : 140}
