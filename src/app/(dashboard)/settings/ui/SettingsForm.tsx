@@ -86,6 +86,7 @@ interface SettingsFormProps {
     openaiModel: string;
     systemPrompt: string;
     asaasWebhookUrl: string;
+    n8nTranscribeWebhook: string;
     appUrl: string;
   };
   defaultSystemPrompt: string;
@@ -329,6 +330,29 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4 pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Integração com n8n</CardTitle>
+              <CardDescription>
+                Configure o webhook do n8n para transcrição de áudio (Whisper)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="n8nTranscribeWebhook">URL do Webhook de Transcrição</Label>
+                <Input
+                  id="n8nTranscribeWebhook"
+                  value={formData.n8nTranscribeWebhook}
+                  onChange={(e) => handleChange("n8nTranscribeWebhook", e.target.value)}
+                  placeholder="https://n8n.amovidas.com.br/webhook/transcribe"
+                />
+                <p className="text-xs text-gray-500">
+                  Webhook do n8n que processa áudio com OpenAI Whisper e retorna a transcrição.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Integração com Asaas</CardTitle>

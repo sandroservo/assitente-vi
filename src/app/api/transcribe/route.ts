@@ -7,9 +7,7 @@
  */
 
 import { NextResponse } from "next/server";
-
-// URL do webhook n8n - configurar no .env
-const N8N_TRANSCRIBE_WEBHOOK = process.env.N8N_TRANSCRIBE_WEBHOOK || "";
+import { getSystemSettings } from "@/lib/settings";
 
 export async function POST(req: Request) {
     try {
@@ -23,18 +21,21 @@ export async function POST(req: Request) {
             );
         }
 
-        if (!N8N_TRANSCRIBE_WEBHOOK) {
+        const settings = await getSystemSettings();
+        const webhookUrl = settings.n8nTranscribeWebhook;
+
+        if (!webhookUrl) {
             return NextResponse.json(
                 {
                     error: "Webhook n8n não configurado",
-                    message: "Configure N8N_TRANSCRIBE_WEBHOOK no .env"
+                    message: "Configure o webhook de transcrição em Configurações → Integrações"
                 },
                 { status: 500 }
             );
         }
 
         // Chama o webhook do n8n
-        const n8nResponse = await fetch(N8N_TRANSCRIBE_WEBHOOK, {
+        const n8nResponse = await fetch(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

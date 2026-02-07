@@ -16,6 +16,7 @@ export interface SystemSettings {
   openaiModel: string;
   systemPrompt: string;
   asaasWebhookUrl: string;
+  n8nTranscribeWebhook: string;
   appUrl: string;
 }
 
@@ -28,6 +29,7 @@ const SETTINGS_KEYS = {
   OPENAI_MODEL: "openai_model",
   SYSTEM_PROMPT: "system_prompt",
   ASAAS_WEBHOOK_URL: "asaas_webhook_url",
+  N8N_TRANSCRIBE_WEBHOOK: "n8n_transcribe_webhook",
   APP_URL: "app_url",
 };
 
@@ -83,6 +85,10 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       "",
     asaasWebhookUrl:
       map.get(SETTINGS_KEYS.ASAAS_WEBHOOK_URL) ||
+      "",
+    n8nTranscribeWebhook:
+      map.get(SETTINGS_KEYS.N8N_TRANSCRIBE_WEBHOOK) ||
+      process.env.N8N_TRANSCRIBE_WEBHOOK ||
       "",
     appUrl:
       map.get(SETTINGS_KEYS.APP_URL) ||
@@ -149,6 +155,13 @@ export async function saveSystemSettings(
     updates.push({
       key: SETTINGS_KEYS.ASAAS_WEBHOOK_URL,
       value: settings.asaasWebhookUrl,
+      encrypted: false,
+    });
+  }
+  if (settings.n8nTranscribeWebhook !== undefined) {
+    updates.push({
+      key: SETTINGS_KEYS.N8N_TRANSCRIBE_WEBHOOK,
+      value: settings.n8nTranscribeWebhook,
       encrypted: false,
     });
   }
