@@ -51,6 +51,7 @@ export async function POST(req: Request) {
     // Identifica o atendente logado
     const session = await auth();
     const sentByUserId = session?.user?.id || null;
+    console.log("[Send Message] Auth session:", { userId: sentByUserId, userName: session?.user?.name });
 
     const msg = await prisma.message.create({
       data: {
