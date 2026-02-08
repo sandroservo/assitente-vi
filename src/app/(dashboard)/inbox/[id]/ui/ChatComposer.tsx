@@ -21,7 +21,7 @@ import {
   Smile,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import EmojiPicker from "./EmojiPicker";
+import EmojiPicker from "@/components/chat/EmojiPicker";
 
 interface ChatComposerProps {
   conversationId: string;

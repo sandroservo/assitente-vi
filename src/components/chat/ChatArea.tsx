@@ -28,7 +28,9 @@ import {
   Image,
   X,
   FileText,
+  Smile,
 } from "lucide-react";
+import EmojiPicker from "@/components/chat/EmojiPicker";
 
 interface Message {
   id: string;
@@ -74,7 +76,9 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
   const [sendingAudio, setSendingAudio] = useState(false);
   const [sendingMedia, setSendingMedia] = useState(false);
   const [showCardsGallery, setShowCardsGallery] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -416,6 +420,12 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
     } finally {
       setSendingMedia(false);
     }
+  }
+
+  function handleEmojiSelect(emoji: string) {
+    setText((prev) => prev + emoji);
+    // Foca no input após selecionar emoji
+    requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   function formatRecordingTime(seconds: number) {
@@ -792,6 +802,28 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
                 <div className="flex items-center gap-2 md:gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
                   {/* Botão Anexo */}
                   <div className="relative flex items-center gap-1">
+                    {/* Emoji button */}
+                    <div className="relative">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          "h-9 w-9 rounded-full",
+                          showEmojiPicker ? "bg-pink-50 text-pink-500" : "hover:bg-gray-100 text-gray-500"
+                        )}
+                        onClick={() => setShowEmojiPicker((prev) => !prev)}
+                        title="Emojis"
+                        aria-label="Abrir seletor de emojis"
+                      >
+                        <Smile className="h-5 w-5" />
+                      </Button>
+                      {showEmojiPicker && (
+                        <EmojiPicker
+                          onSelect={handleEmojiSelect}
+                          onClose={() => setShowEmojiPicker(false)}
+                        />
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -814,6 +846,7 @@ export function ChatArea({ conversationId, lead: initialLead, messages: initialM
                     </Button>
                   </div>
                   <Input
+                    ref={inputRef}
                     placeholder="Digite uma mensagem..."
                     value={text}
                     onChange={(e) => setText(e.target.value)}
