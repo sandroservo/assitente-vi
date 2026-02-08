@@ -345,14 +345,33 @@ export default function ChatPageClient({
 
         {/* Tab: Anotações */}
         {activeTab === "anotacoes" && (
-          <div className="flex-1 p-6 overflow-auto">
+          <div className="flex-1 p-6 overflow-auto space-y-4">
+            {/* Resumo automático da conversa */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="font-semibold mb-4">Anotações</h3>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-pink-500" />
+                <h3 className="font-semibold text-sm">Resumo da Conversa</h3>
+                <span className="text-[10px] text-gray-400 ml-auto">Gerado automaticamente</span>
+              </div>
+              {lead.summary ? (
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {lead.summary}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-400 italic">
+                  O resumo será gerado automaticamente conforme a conversa avança...
+                </p>
+              )}
+            </div>
+
+            {/* Notas manuais */}
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <h3 className="font-semibold text-sm mb-3">Notas do Atendente</h3>
               <textarea
                 placeholder="Adicione notas sobre este lead..."
-                className="w-full h-40 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full h-32 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm"
                 defaultValue=""
-                aria-label="Anotações do lead"
+                aria-label="Notas manuais do lead"
               />
             </div>
           </div>

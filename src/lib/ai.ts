@@ -93,10 +93,11 @@ Após se apresentar e saber o nome, conduza o quiz de forma natural para qualifi
 2. ROTINA DE EXAMES — "Quando foi a última vez que fez um check-up ou exames de rotina?"
 3. TIPO DE CUIDADO — "Pensando no cuidado com saúde, o que seria mais importante: check-up completo, consultas quando precisar, exames específicos, ou tudo aos poucos?"
 4. FAMÍLIA — "Esse cuidado seria só pra você ou pra mais alguém da família?"
-5. PAGAMENTO — "Você prefere pagar tudo quando precisa ou organizar por mês?"
-6. RESUMO PERSONALIZADO — Faça um resumo do que entendeu: "Pelo que me contou, o ideal pra você é..." (momento CHAVE — gerar "ela me entendeu")
-7. ENTRADA DA ASSINATURA — Só DEPOIS do resumo: "Quem faz check-up e consultas com frequência costuma economizar bastante usando a assinatura, em vez de pagar tudo avulso."
-8. DECISÃO SUAVE — "Quer que eu te mostre o formato mais vantajoso no seu caso?"
+5. EMAIL — Em algum momento natural da conversa (depois de saber o nome, antes do resumo), peça o email de forma leve: "Me passa seu email pra eu te enviar as informações certinhas? 📩" ou "Qual seu email pra eu te mandar os detalhes?". Se já tiver o email, NÃO peça novamente.
+6. PAGAMENTO — "Você prefere pagar tudo quando precisa ou organizar por mês?"
+7. RESUMO PERSONALIZADO — Faça um resumo do que entendeu: "Pelo que me contou, o ideal pra você é..." (momento CHAVE — gerar "ela me entendeu")
+8. ENTRADA DA ASSINATURA — Só DEPOIS do resumo: "Quem faz check-up e consultas com frequência costuma economizar bastante usando a assinatura, em vez de pagar tudo avulso."
+9. DECISÃO SUAVE — "Quer que eu te mostre o formato mais vantajoso no seu caso?"
 
 IMPORTANTE: O quiz é um GUIA, não um script. Se o lead já respondeu algo, não repita. Se ele pergunta algo, responda e retome depois. Pule perguntas quando a pessoa já deu a informação.
 
@@ -218,6 +219,19 @@ export async function generateAIResponse(
       messages.push({
         role: "system",
         content: `Você ainda não sabe o nome do cliente. Pergunte o nome dele de forma natural.`,
+      });
+    }
+
+    // Contexto do email: Vi sabe se já tem ou precisa pedir
+    if (context.leadEmail) {
+      messages.push({
+        role: "system",
+        content: `O email do cliente já foi coletado: ${context.leadEmail}. NÃO peça o email novamente.`,
+      });
+    } else if (context.leadName && !isFirstMessage) {
+      messages.push({
+        role: "system",
+        content: `Você já sabe o nome do cliente mas ainda NÃO tem o email dele. Quando surgir um momento natural na conversa, peça o email de forma leve (ex: "Me passa seu email pra eu te enviar os detalhes? 📩"). Não force — espere um momento adequado.`,
       });
     }
 
@@ -537,4 +551,49 @@ export function detectLeadStatus(
   }
 
   return null; // Mantém o status atual
+}
+
+/**
+ * Gera um resumo curto da conversa para a aba Anotações
+ * Chamado a cada N mensagens ou quando há dados novos relevantes
+ */
+export async function generateConversationSummary(
+  messageHistory: { direction: string; body: string | null }[],
+  leadName: string | null
+): Promise<string | null> {
+  try {
+    const openai = await getOpenAIClient();
+    if (!openai) return null;
+
+    const msgs = messageHistory
+      .filter((m) => m.body)
+      .map((m) => `${m.direction === "in" ? "Cliente" : "Vi"}: ${m.body}`)
+      .join("\n");
+
+    if (!msgs.trim()) return null;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Resuma a conversa abaixo em português (pt-BR), de forma objetiva, em no máximo 5 linhas.
+Inclua: o que o cliente busca, planos/serviços mencionados, objeções, dados coletados (nome, email, cidade), e o status atual da negociação.
+Use formato de tópicos curtos. Não invente dados que não estejam na conversa.
+${leadName ? `Nome do cliente: ${leadName}` : ""}`,
+        },
+        {
+          role: "user",
+          content: msgs,
+        },
+      ],
+      max_tokens: 200,
+      temperature: 0.3,
+    });
+
+    return completion.choices[0]?.message?.content?.trim() ?? null;
+  } catch (error) {
+    console.error("Erro ao gerar resumo:", error);
+    return null;
+  }
 }

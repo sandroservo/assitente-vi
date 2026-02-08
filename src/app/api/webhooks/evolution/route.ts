@@ -11,7 +11,7 @@ import { evolutionSendText, evolutionSendTextHumanized, evolutionSendMedia, evol
 import { readFile } from "fs/promises";
 import path from "path";
 import { transcribeAudio, describeImage } from "@/lib/media";
-import { generateAIResponse, shouldTransferToHuman, detectLeadStatus } from "@/lib/ai";
+import { generateAIResponse, shouldTransferToHuman, detectLeadStatus, generateConversationSummary } from "@/lib/ai";
 import { updateLeadScore, getStatusFromScore } from "@/lib/lead-score";
 
 function phoneFromJid(remoteJid: string) {
@@ -362,6 +362,22 @@ export async function POST(req: Request) {
           data: { status: newStatus as LeadStatus },
         });
         console.log(`Lead ${lead.id} status atualizado: ${lead.status} → ${newStatus} (score: ${scoreBreakdown.total})`);
+      }
+
+      // Gera resumo da conversa a cada 5 mensagens do lead (não bloqueia resposta)
+      const leadMsgCount = messageHistory.filter((m) => m.direction === "in").length;
+      if (leadMsgCount > 0 && leadMsgCount % 5 === 0) {
+        generateConversationSummary(messageHistory, lead.name)
+          .then(async (summary) => {
+            if (summary) {
+              await prisma.lead.update({
+                where: { id: lead.id },
+                data: { summary },
+              });
+              console.log(`Lead ${lead.id} resumo atualizado`);
+            }
+          })
+          .catch((err) => console.error("Erro ao gerar resumo:", err));
       }
     } catch (sendError) {
       console.error("Erro ao enviar resposta do bot:", sendError);
