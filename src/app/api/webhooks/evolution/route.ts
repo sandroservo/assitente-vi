@@ -256,6 +256,7 @@ export async function POST(req: Request) {
       organizationId: lead.organizationId,
       leadName: lead.name,
       leadEmail: lead.email,
+      leadCity: lead.city,
       leadPhone: lead.phone,
       leadStatus: lead.status,
       messageHistory,

@@ -16,6 +16,11 @@ import {
   Phone,
   RefreshCw,
   MoreHorizontal,
+  User,
+  Mail,
+  MapPin,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -282,64 +287,105 @@ export default function ChatPageClient({
 
         {/* Tab: Detalhes */}
         {activeTab === "detalhes" && (
-          <div className="flex-1 p-6 overflow-auto">
-            <div className="bg-white rounded-xl p-6 shadow-sm space-y-4">
-              <h3 className="font-semibold">Informações do Lead</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500">Nome</p>
-                  <p className="font-medium">{lead.name || lead.pushName || "Não informado"}</p>
+          <div className="flex-1 p-6 overflow-auto space-y-4">
+            {/* Dados coletados pela Vi */}
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2 h-2 rounded-full bg-pink-500" />
+                <h3 className="font-semibold text-sm">Dados Coletados pela Vi</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                  <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-gray-400 uppercase tracking-wider">Nome</p>
+                    <p className="text-sm font-medium truncate">{lead.name || lead.pushName || "Aguardando..."}</p>
+                  </div>
+                  {(lead.name || lead.pushName) && <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />}
                 </div>
-                <div>
-                  <p className="text-gray-500">Telefone</p>
-                  <p className="font-medium">{lead.phone}</p>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                  <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-gray-400 uppercase tracking-wider">Telefone</p>
+                    <p className="text-sm font-medium truncate">{lead.phone}</p>
+                  </div>
+                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                 </div>
-                <div>
-                  <p className="text-gray-500">Email</p>
-                  <p className="font-medium">{lead.email || "Não informado"}</p>
+                <div className={`flex items-center gap-3 p-3 rounded-lg ${lead.email ? "bg-gray-50" : "bg-amber-50 border border-amber-200"}`}>
+                  <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-gray-400 uppercase tracking-wider">Email</p>
+                    <p className={`text-sm font-medium truncate ${!lead.email ? "text-amber-600 italic" : ""}`}>
+                      {lead.email || "Vi irá solicitar..."}
+                    </p>
+                  </div>
+                  {lead.email ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  ) : (
+                    <Clock className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  )}
                 </div>
-                <div>
-                  <p className="text-gray-500">Cidade</p>
-                  <p className="font-medium">{lead.city || "Não informado"}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Status</p>
-                  <p className="font-medium">{lead.status.replace(/_/g, " ")}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Atendimento</p>
-                  <p className="font-medium">
-                    {lead.ownerType === "human" ? "Humano" : "Bot (Vi)"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Lead Score</p>
-                  <p className="font-medium">{lead.leadScore} / 1.000</p>
+                <div className={`flex items-center gap-3 p-3 rounded-lg ${lead.city ? "bg-gray-50" : "bg-amber-50 border border-amber-200"}`}>
+                  <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-gray-400 uppercase tracking-wider">Cidade</p>
+                    <p className={`text-sm font-medium truncate ${!lead.city ? "text-amber-600 italic" : ""}`}>
+                      {lead.city || "Vi irá solicitar..."}
+                    </p>
+                  </div>
+                  {lead.city ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  ) : (
+                    <Clock className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  )}
                 </div>
               </div>
-              {lead.summary && (
-                <div>
-                  <p className="text-gray-500 text-sm">Resumo</p>
-                  <p className="text-sm mt-1">{lead.summary}</p>
+            </div>
+
+            {/* Status e Score */}
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <h3 className="font-semibold text-sm mb-4">Status & Qualificação</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="p-3 rounded-lg bg-gray-50">
+                  <p className="text-[11px] text-gray-400 uppercase tracking-wider">Status</p>
+                  <p className="font-medium">{lead.status.replace(/_/g, " ")}</p>
                 </div>
-              )}
-              {lead.tags.length > 0 && (
-                <div>
-                  <p className="text-gray-500 text-sm mb-2">Tags</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {lead.tags.map((tag) => (
-                      <span
-                        key={tag.id}
-                        className="px-2 py-0.5 rounded-full text-xs font-medium"
-                        style={{ backgroundColor: tag.color + "20", color: tag.color }}
-                      >
-                        {tag.name}
-                      </span>
-                    ))}
+                <div className="p-3 rounded-lg bg-gray-50">
+                  <p className="text-[11px] text-gray-400 uppercase tracking-wider">Atendimento</p>
+                  <p className="font-medium">{lead.ownerType === "human" ? "👤 Humano" : "🤖 Bot (Vi)"}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-gray-50 col-span-2">
+                  <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Lead Score</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full transition-all"
+                        style={{ width: `${Math.min((lead.leadScore / 1000) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-bold text-pink-600">{lead.leadScore}</span>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
+
+            {/* Tags */}
+            {lead.tags.length > 0 && (
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h3 className="font-semibold text-sm mb-3">Tags</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {lead.tags.map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="px-2.5 py-1 rounded-full text-xs font-medium"
+                      style={{ backgroundColor: tag.color + "20", color: tag.color }}
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

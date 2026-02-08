@@ -32,6 +32,7 @@ interface ConversationContext {
   organizationId?: string | null;
   leadName?: string | null;
   leadEmail?: string | null;
+  leadCity?: string | null;
   leadPhone?: string;
   leadStatus?: string;
   messageHistory: { direction: "in" | "out"; body: string | null }[];
@@ -93,7 +94,7 @@ Após se apresentar e saber o nome, conduza o quiz de forma natural para qualifi
 2. ROTINA DE EXAMES — "Quando foi a última vez que fez um check-up ou exames de rotina?"
 3. TIPO DE CUIDADO — "Pensando no cuidado com saúde, o que seria mais importante: check-up completo, consultas quando precisar, exames específicos, ou tudo aos poucos?"
 4. FAMÍLIA — "Esse cuidado seria só pra você ou pra mais alguém da família?"
-5. EMAIL — Em algum momento natural da conversa (depois de saber o nome, antes do resumo), peça o email de forma leve: "Me passa seu email pra eu te enviar as informações certinhas? 📩" ou "Qual seu email pra eu te mandar os detalhes?". Se já tiver o email, NÃO peça novamente.
+5. EMAIL E CIDADE — Em algum momento natural da conversa (depois de saber o nome, antes do resumo), peça email e cidade de forma leve. Pode ser junto ou separado: "Me passa seu email e de qual cidade você é? Assim consigo te enviar as informações certinhas 📩" ou "Qual seu email?" e depois "E você é de onde?". Se já tiver o email, NÃO peça novamente. Se já tiver a cidade, NÃO peça novamente.
 6. PAGAMENTO — "Você prefere pagar tudo quando precisa ou organizar por mês?"
 7. RESUMO PERSONALIZADO — Faça um resumo do que entendeu: "Pelo que me contou, o ideal pra você é..." (momento CHAVE — gerar "ela me entendeu")
 8. ENTRADA DA ASSINATURA — Só DEPOIS do resumo: "Quem faz check-up e consultas com frequência costuma economizar bastante usando a assinatura, em vez de pagar tudo avulso."
@@ -222,16 +223,33 @@ export async function generateAIResponse(
       });
     }
 
-    // Contexto do email: Vi sabe se já tem ou precisa pedir
+    // Contexto de email e cidade: Vi sabe o que já tem e o que falta pedir
+    const missingData: string[] = [];
+    const collectedData: string[] = [];
+
     if (context.leadEmail) {
+      collectedData.push(`Email: ${context.leadEmail}`);
+    } else {
+      missingData.push("email");
+    }
+
+    if (context.leadCity) {
+      collectedData.push(`Cidade: ${context.leadCity}`);
+    } else {
+      missingData.push("cidade");
+    }
+
+    if (collectedData.length > 0) {
       messages.push({
         role: "system",
-        content: `O email do cliente já foi coletado: ${context.leadEmail}. NÃO peça o email novamente.`,
+        content: `Dados já coletados do cliente: ${collectedData.join(", ")}. NÃO peça esses dados novamente.`,
       });
-    } else if (context.leadName && !isFirstMessage) {
+    }
+
+    if (missingData.length > 0 && context.leadName && !isFirstMessage) {
       messages.push({
         role: "system",
-        content: `Você já sabe o nome do cliente mas ainda NÃO tem o email dele. Quando surgir um momento natural na conversa, peça o email de forma leve (ex: "Me passa seu email pra eu te enviar os detalhes? 📩"). Não force — espere um momento adequado.`,
+        content: `Ainda FALTA coletar: ${missingData.join(" e ")}. Quando surgir um momento natural na conversa, peça de forma leve (ex: "Me passa seu email e de qual cidade você é? 📩"). Não force — espere um momento adequado. Pode pedir junto ou separado.`,
       });
     }
 
@@ -265,11 +283,11 @@ export async function generateAIResponse(
       return { response: generateFallbackResponse(userMessage, context.leadName) };
     }
 
-    // Tenta extrair nome e email da mensagem do usuário
+    // Tenta extrair nome, email e cidade da mensagem do usuário
     const extractedData = extractLeadData(userMessage, context);
 
     // Atualiza o lead no banco se encontrou dados novos
-    if (extractedData.name || extractedData.email) {
+    if (extractedData.name || extractedData.email || extractedData.city) {
       await updateLeadData(context.leadId, extractedData);
     }
 
@@ -283,14 +301,32 @@ export async function generateAIResponse(
 function extractLeadData(
   message: string,
   context: ConversationContext
-): { name?: string; email?: string } {
-  const result: { name?: string; email?: string } = {};
+): { name?: string; email?: string; city?: string } {
+  const result: { name?: string; email?: string; city?: string } = {};
 
   // Extrai email
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
   const emailMatch = message.match(emailRegex);
   if (emailMatch) {
     result.email = emailMatch[0].toLowerCase();
+  }
+
+  // Extrai cidade
+  if (!context.leadCity) {
+    const cityPatterns = [
+      /(?:sou de|moro em|moro no|moro na|estou em|tô em|to em|fico em|resido em|cidade[:\s]+)\s*([A-ZÀ-Úa-zà-ú][a-zà-ú]+(?:\s+(?:do|da|de|dos|das|e)\s+)?(?:[A-ZÀ-Úa-zà-ú][a-zà-ú]+)?)/i,
+      /(?:aqui (?:em|no|na))\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:do|da|de|dos|das|e)\s+)?(?:[A-ZÀ-Ú][a-zà-ú]+)?)/i,
+    ];
+    for (const pattern of cityPatterns) {
+      const match = message.match(pattern);
+      if (match && match[1]) {
+        const city = match[1].trim();
+        if (city.length >= 3 && !/\d/.test(city)) {
+          result.city = city;
+          break;
+        }
+      }
+    }
   }
 
   // Tenta extrair nome apenas com padrões explícitos ("me chamo X", "sou o X")
@@ -336,13 +372,14 @@ function extractLeadData(
 
 async function updateLeadData(
   leadId: string,
-  data: { name?: string; email?: string }
+  data: { name?: string; email?: string; city?: string }
 ) {
   try {
-    const updateData: { name?: string; email?: string } = {};
+    const updateData: { name?: string; email?: string; city?: string } = {};
 
     if (data.name) updateData.name = data.name;
     if (data.email) updateData.email = data.email;
+    if (data.city) updateData.city = data.city;
 
     // Atualiza apenas nome/email; status segue o fluxo NOVO → EM_ATENDIMENTO → QUALIFICADO
     if (Object.keys(updateData).length > 0) {
