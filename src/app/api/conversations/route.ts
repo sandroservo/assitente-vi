@@ -14,7 +14,14 @@ export async function GET() {
   try {
     const convos = await prisma.conversation.findMany({
       orderBy: { lastMessageAt: "desc" },
-      include: { lead: true },
+      include: {
+        lead: true,
+        messages: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { body: true, type: true, direction: true },
+        },
+      },
       take: 200,
     });
 
@@ -27,18 +34,25 @@ export async function GET() {
       (a, b) => (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0)
     );
 
-    const conversations = uniqueConvos.map((c: (typeof uniqueConvos)[number]) => ({
-      id: c.id,
-      name: c.lead.name,
-      pushName: c.lead.pushName,
-      avatarUrl: c.lead.avatarUrl,
-      phone: c.lead.phone,
-      status: c.lead.status,
-      ownerType: c.lead.ownerType,
-      unreadCount: c.unreadCount,
-      lastMessageAt: c.lastMessageAt,
-      isPinned: false,
-    }));
+    const conversations = uniqueConvos.map((c: (typeof uniqueConvos)[number]) => {
+      const lastMsg = (c as any).messages?.[0] ?? null;
+      return {
+        id: c.id,
+        leadId: c.leadId,
+        name: c.lead.name,
+        pushName: c.lead.pushName,
+        avatarUrl: c.lead.avatarUrl,
+        phone: c.lead.phone,
+        status: c.lead.status,
+        ownerType: c.lead.ownerType,
+        leadScore: (c.lead as any).leadScore ?? 0,
+        unreadCount: c.unreadCount,
+        lastMessageAt: c.lastMessageAt,
+        lastMessageBody: lastMsg?.body ?? null,
+        lastMessageType: lastMsg?.type ?? "text",
+        lastMessageDirection: lastMsg?.direction ?? "in",
+      };
+    });
 
     return NextResponse.json({ conversations });
   } catch (error) {

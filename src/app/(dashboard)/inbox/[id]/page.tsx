@@ -1,19 +1,13 @@
 /**
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
+ *
+ * Página de conversa individual — layout WhatsApp com header, chat e sidebar
  */
 
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import ChatComposer from "./ui/ChatComposer";
-import InboxConversation from "./ui/InboxConversation";
-import HandoffButton from "./ui/HandoffButton";
-import ClienteParouResponderButton from "./ui/ClienteParouResponderButton";
-import LeadActions from "./ui/LeadActions";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { User, Phone, Mail, MapPin, Bot, UserCheck } from "lucide-react";
+import ChatPageClient from "./ui/ChatPageClient";
 
 export const dynamic = "force-dynamic";
 
@@ -42,107 +36,35 @@ export default async function ChatPage({
 
   if (!convo) return notFound();
 
+  const lead = {
+    id: convo.lead.id,
+    name: convo.lead.name,
+    pushName: convo.lead.pushName,
+    avatarUrl: convo.lead.avatarUrl,
+    phone: convo.lead.phone,
+    email: convo.lead.email,
+    city: convo.lead.city,
+    status: convo.lead.status as string,
+    ownerType: convo.lead.ownerType as string,
+    leadScore: (convo.lead as any).leadScore ?? 0,
+    summary: convo.lead.summary,
+    tags: convo.lead.tags,
+  };
+
+  const messages = (convo.messages as any[]).map((m) => ({
+    id: m.id,
+    body: m.body ?? "",
+    type: m.type ?? "text",
+    direction: m.direction,
+    createdAt: m.createdAt,
+    sentByUserName: m.sentByUser?.name ?? null,
+  }));
+
   return (
-    <div className="h-[calc(100vh-4rem)] p-6 grid grid-cols-12 gap-4">
-      <Card className="col-span-12 lg:col-span-3">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <CardTitle>{convo.lead.name ?? "Sem nome"}</CardTitle>
-              <Badge variant="outline" className="mt-1">
-                {convo.lead.status}
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{convo.lead.phone}</span>
-            </div>
-            {convo.lead.email && (
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>{convo.lead.email}</span>
-              </div>
-            )}
-            {convo.lead.city && (
-              <div className="flex items-center gap-2 text-sm">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{convo.lead.city}</span>
-              </div>
-            )}
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center gap-2">
-            {convo.lead.ownerType === "bot" ? (
-              <>
-                <Bot className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Vi (Bot)</span>
-              </>
-            ) : (
-              <>
-                <UserCheck className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-green-600">Atendimento Humano</span>
-              </>
-            )}
-          </div>
-
-          <Separator />
-
-          <HandoffButton
-            leadId={convo.leadId}
-            isHuman={convo.lead.ownerType === "human"}
-          />
-
-          <ClienteParouResponderButton
-            leadId={convo.leadId}
-            conversationId={convo.id}
-          />
-
-          <Separator />
-
-          <LeadActions
-            leadId={convo.leadId}
-            leadName={convo.lead.name}
-            leadTags={convo.lead.tags}
-          />
-
-          {convo.lead.summary && (
-            <>
-              <Separator />
-              <div>
-                <p className="text-sm font-medium mb-1">Resumo</p>
-                <p className="text-sm text-muted-foreground">{convo.lead.summary}</p>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="col-span-12 lg:col-span-9 flex flex-col">
-        <CardHeader className="py-3">
-          <CardTitle className="text-base">Conversa</CardTitle>
-        </CardHeader>
-        <Separator />
-        <InboxConversation
-          conversationId={convo.id}
-          initialMessages={(convo.messages as any[]).map((m) => ({
-            ...m,
-            sentByUserName: m.sentByUser?.name ?? null,
-          }))}
-        />
-        <Separator />
-        <div className="p-4">
-          <ChatComposer conversationId={convo.id} />
-        </div>
-      </Card>
-    </div>
+    <ChatPageClient
+      conversationId={convo.id}
+      lead={lead}
+      initialMessages={messages}
+    />
   );
 }

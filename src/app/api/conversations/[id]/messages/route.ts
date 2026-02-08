@@ -54,6 +54,7 @@ export async function GET(
       messages: (conversation.messages as any[]).map((m) => ({
         id: m.id,
         body: m.body ?? "",
+        type: m.type ?? "text",
         direction: m.direction,
         createdAt: m.createdAt.toISOString(),
         sentByUserName: m.sentByUser?.name ?? null,
