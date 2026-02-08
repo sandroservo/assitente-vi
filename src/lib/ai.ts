@@ -512,54 +512,44 @@ export function detectLeadStatus(
     return "FECHADO";
   }
 
-  // QUALIFICADO - Sinais de interesse (pode vir de NOVO ou EM_ATENDIMENTO)
+  // QUALIFICADO - Somente quando demonstra interesse REAL em fechar/contratar um plano específico
+  // Frases genéricas como "tenho interesse", "quero saber mais" NÃO qualificam
   const qualifiedKeywords = [
-    "quanto custa",
-    "qual o preço",
-    "qual o preco",
-    "qual valor",
-    "qual o valor",
-    "quero saber o preço",
-    "quero saber o preco",
-    "quero saber o valor",
-    "como funciona",
-    "me explica",
-    "tenho interesse",
-    "quero saber mais",
-    "pode me explicar",
-    "como faço para",
-    "como faco para",
-    "gostei",
-    "interessante",
-    "parece bom",
-    "me conta mais",
-    "quais são os planos",
-    "quais sao os planos",
-    "quais os planos",
-    "me fala dos planos",
-    "tem desconto",
-    "formas de pagamento",
-    "como pago",
     "quero assinar",
     "quero contratar",
+    "vou assinar",
+    "quero o plano",
+    "quero esse plano",
+    "quero o rotina",
+    "quero o especializado",
+    "quero o cobertura total",
+    "gostei do plano",
+    "gostei do rotina",
+    "gostei do especializado",
+    "como faço pra assinar",
+    "como faco pra assinar",
+    "como assino",
+    "me manda o link",
+    "manda o link",
+    "pode mandar o link",
+    "quero fechar",
+    "bora fechar",
+    "vamos fechar",
+    "formas de pagamento",
+    "como pago",
+    "aceito o plano",
+    "pode ser esse",
+    "vou querer",
+    "quero esse",
   ];
-  const hasQualifiedSignal = qualifiedKeywords.some((k) => combined.includes(k));
+  const hasQualifiedSignal = qualifiedKeywords.some((k) => msg.includes(k));
   if (hasQualifiedSignal && currentStatus !== "FECHADO") {
-    // QUALIFICADO: já está em atendimento OU é NOVO mas já respondeu (tem mensagens) e mostrou interesse
-    const canQualify =
-      currentStatus === "EM_ATENDIMENTO" ||
-      currentStatus === "QUALIFICADO" ||
-      currentStatus === "PROPOSTA_ENVIADA" ||
-      currentStatus === "EM_NEGOCIACAO" ||
-      currentStatus === "AGUARDANDO_RESPOSTA" ||
-      (currentStatus === "NOVO" && messageHistory.length >= 1);
-    if (canQualify) {
-      return "QUALIFICADO";
-    }
+    return "QUALIFICADO";
   }
 
-  // EM_ATENDIMENTO - lead que trocou mensagens sai de NOVO (quando ainda não qualificou)
-  if (currentStatus === "NOVO" && messageHistory.length >= 2) {
+  // EM_ATENDIMENTO - lead que já interagiu significativamente (6+ mensagens no histórico = conversa avançou)
+  // Antes disso permanece NOVO para o time de vendas identificar quem entrou e não engajou
+  if (currentStatus === "NOVO" && messageHistory.length >= 6) {
     return "EM_ATENDIMENTO";
   }
 
