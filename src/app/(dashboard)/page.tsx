@@ -108,7 +108,7 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-800">Clientes ativos</h2>
             <Link
-              href="/inbox"
+              href="/chats"
               className="px-4 py-2 bg-[#FE3E6E] text-white text-sm font-medium rounded-lg hover:bg-[#C24695] transition-colors"
             >
               Ver conversas
@@ -144,7 +144,7 @@ export default async function DashboardPage() {
                 return (
                   <Link
                     key={conv.id}
-                    href={`/inbox/${conv.id}`}
+                    href={`/chats/${conv.id}`}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
@@ -180,7 +180,7 @@ export default async function DashboardPage() {
             )}
           </div>
           <Link
-            href="/inbox"
+            href="/chats"
             className="block w-full mt-4 py-3 text-sm font-medium text-center text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Ir para atendimento

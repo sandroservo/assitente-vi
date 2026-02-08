@@ -623,7 +623,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
 
                                       {/* Link para conversa (área clicável transparente para não interferir no drag) */}
                                       {lead.conversationId && (
-                                        <Link href={`/inbox/${lead.conversationId}`} className="absolute inset-x-0 bottom-0 top-12 z-0" />
+                                        <Link href={`/chats/${lead.conversationId}`} className="absolute inset-x-0 bottom-0 top-12 z-0" />
                                       )}
                                     </div>
                                   )}

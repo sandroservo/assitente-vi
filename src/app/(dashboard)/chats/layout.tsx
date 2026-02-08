@@ -2,7 +2,7 @@
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
  *
- * Layout do Inbox — estrutura WhatsApp-like com sidebar de conversas persistente
+ * Layout do Chats — estrutura WhatsApp-like com sidebar de conversas persistente
  */
 
 import { prisma } from "@/lib/prisma";
@@ -10,7 +10,7 @@ import ConversationSidebar from "./ui/ConversationSidebar";
 
 export const dynamic = "force-dynamic";
 
-export default async function InboxLayout({
+export default async function ChatsLayout({
   children,
 }: {
   children: React.ReactNode;

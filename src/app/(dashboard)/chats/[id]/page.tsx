@@ -1,12 +1,13 @@
 /**
  * Autor: Sandro Servo
  * Site: https://cloudservo.com.br
+ *
+ * Página de conversa individual — layout WhatsApp com header, chat e sidebar
  */
 
-import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { ChatList } from "@/components/chat/ChatList";
-import { ChatArea } from "@/components/chat/ChatArea";
+import { notFound } from "next/navigation";
+import ChatPageClient from "./ui/ChatPageClient";
 
 export const dynamic = "force-dynamic";
 
@@ -17,27 +18,14 @@ export default async function ChatDetailPage({
 }) {
   const { id } = await params;
 
-  // Busca todas as conversas para a lista
-  const allConversations = await prisma.conversation.findMany({
-    orderBy: { lastMessageAt: "desc" },
-    include: { lead: true },
-    take: 200,
-  });
-
-  // Uma conversa por lead (evita duplicata na lista)
-  const byLeadId = new Map<string, (typeof allConversations)[number]>();
-  for (const c of allConversations) {
-    if (!byLeadId.has(c.leadId)) byLeadId.set(c.leadId, c);
-  }
-  const conversations = Array.from(byLeadId.values()).sort(
-    (a, b) => (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0)
-  );
-
-  // Busca a conversa atual com mensagens
-  const currentConversation = await prisma.conversation.findUnique({
+  const convo = await prisma.conversation.findUnique({
     where: { id },
     include: {
-      lead: true,
+      lead: {
+        include: {
+          tags: { select: { id: true, name: true, color: true } },
+        },
+      },
       messages: {
         orderBy: { createdAt: "asc" },
         take: 200,
@@ -46,9 +34,7 @@ export default async function ChatDetailPage({
     },
   });
 
-  if (!currentConversation) {
-    return notFound();
-  }
+  if (!convo) return notFound();
 
   // Marca como lida
   await prisma.conversation.update({
@@ -56,49 +42,35 @@ export default async function ChatDetailPage({
     data: { unreadCount: 0 },
   });
 
-  const chats = conversations.map((c: (typeof conversations)[number]) => ({
-    id: c.id,
-    name: c.lead.name,
-    pushName: c.lead.pushName,
-    avatarUrl: c.lead.avatarUrl,
-    phone: c.lead.phone,
-    status: c.lead.status,
-    ownerType: c.lead.ownerType as "bot" | "human",
-    unreadCount: c.unreadCount,
-    lastMessageAt: c.lastMessageAt,
-    isPinned: false,
-  }));
-
   const lead = {
-    id: currentConversation.lead.id,
-    name: currentConversation.lead.name,
-    pushName: currentConversation.lead.pushName,
-    avatarUrl: currentConversation.lead.avatarUrl,
-    phone: currentConversation.lead.phone,
-    email: currentConversation.lead.email,
-    city: currentConversation.lead.city,
-    status: currentConversation.lead.status,
-    ownerType: currentConversation.lead.ownerType as "bot" | "human",
-    summary: currentConversation.lead.summary,
-    notes: currentConversation.lead.notes,
+    id: convo.lead.id,
+    name: convo.lead.name,
+    pushName: convo.lead.pushName,
+    avatarUrl: convo.lead.avatarUrl,
+    phone: convo.lead.phone,
+    email: convo.lead.email,
+    city: convo.lead.city,
+    status: convo.lead.status as string,
+    ownerType: convo.lead.ownerType as string,
+    leadScore: (convo.lead as any).leadScore ?? 0,
+    summary: convo.lead.summary,
+    tags: convo.lead.tags,
   };
 
-  const messages = (currentConversation.messages as any[]).map((m) => ({
+  const messages = (convo.messages as any[]).map((m) => ({
     id: m.id,
-    body: m.body || "",
-    direction: m.direction as "in" | "out",
+    body: m.body ?? "",
+    type: m.type ?? "text",
+    direction: m.direction,
     createdAt: m.createdAt,
     sentByUserName: m.sentByUser?.name ?? null,
   }));
 
   return (
-    <div className="flex h-[calc(100vh-0px)]">
-      <ChatList chats={chats} />
-      <ChatArea
-        conversationId={id}
-        lead={lead}
-        messages={messages}
-      />
-    </div>
+    <ChatPageClient
+      conversationId={convo.id}
+      lead={lead}
+      initialMessages={messages}
+    />
   );
 }

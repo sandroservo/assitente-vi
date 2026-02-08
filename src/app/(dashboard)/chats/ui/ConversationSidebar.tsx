@@ -98,8 +98,8 @@ export default function ConversationSidebar({
   const router = useRouter();
 
   // Extrai o ID da conversa ativa do pathname
-  const activeId = pathname.startsWith("/inbox/")
-    ? pathname.split("/inbox/")[1]?.split("/")[0] ?? null
+  const activeId = pathname.startsWith("/chats/")
+    ? pathname.split("/chats/")[1]?.split("/")[0] ?? null
     : null;
 
   // Polling para atualizar lista de conversas
@@ -184,7 +184,7 @@ export default function ConversationSidebar({
           return (
             <button
               key={conv.id}
-              onClick={() => router.push(`/inbox/${conv.id}`)}
+              onClick={() => router.push(`/chats/${conv.id}`)}
               className={cn(
                 "w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-gray-50 hover:bg-gray-50",
                 isActive && "bg-pink-50/80 hover:bg-pink-50/80 border-l-2 border-l-pink-500"

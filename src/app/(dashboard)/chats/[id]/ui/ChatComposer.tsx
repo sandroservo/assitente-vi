@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
   FileText,
   Smile,
+  LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EmojiPicker from "@/components/chat/EmojiPicker";
@@ -35,6 +36,8 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachedPreview, setAttachedPreview] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showCardsGallery, setShowCardsGallery] = useState(false);
+  const [sendingCard, setSendingCard] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -200,6 +203,56 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
     }
   }
 
+  // Cards informativos disponíveis em public/cards/
+  const availableCards = [
+    { file: "planos.jpeg", label: "Planos" },
+    { file: "planos_e_seu_dependentes.jpeg", label: "Planos e Dependentes" },
+    { file: "checkups.jpeg", label: "Check-ups" },
+    { file: "especialidades_dentro_dos_palnos.jpeg", label: "Especialidades" },
+    { file: "exame_plano_ cobertura_ total.jpeg", label: "Exames - Cobertura Total" },
+    { file: "exame_plano_ especializado.jpeg", label: "Exames - Especializado" },
+    { file: "exame_plano_ rotina.jpeg", label: "Exames - Rotina" },
+  ];
+
+  async function sendCard(card: { file: string; label: string }) {
+    setSendingCard(true);
+    setShowCardsGallery(false);
+    try {
+      const response = await fetch(`/cards/${card.file}`);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const res = await fetch("/api/messages/send-media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId,
+          base64,
+          mimeType: "image/jpeg",
+          fileName: card.file,
+          caption: card.label,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Erro ao enviar card");
+        return;
+      }
+
+      triggerRefetch();
+    } catch {
+      alert("Erro ao enviar card");
+    } finally {
+      setSendingCard(false);
+    }
+  }
+
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -354,6 +407,43 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
         </div>
       )}
 
+      {/* Cards Gallery */}
+      {showCardsGallery && (
+        <div className="px-4 pt-3 pb-1">
+          <div className="bg-gray-50 rounded-xl border p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Cards Informativos</h4>
+              <button
+                onClick={() => setShowCardsGallery(false)}
+                className="p-1 rounded-md hover:bg-gray-200 transition-colors"
+                aria-label="Fechar galeria de cards"
+              >
+                <X className="h-3.5 w-3.5 text-gray-400" />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {availableCards.map((card) => (
+                <button
+                  key={card.file}
+                  onClick={() => sendCard(card)}
+                  disabled={sendingCard}
+                  className="group relative rounded-lg overflow-hidden border hover:border-pink-400 transition-all hover:shadow-md disabled:opacity-50"
+                >
+                  <img
+                    src={`/cards/${card.file}`}
+                    alt={card.label}
+                    className="w-full h-16 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex items-end p-1">
+                    <span className="text-white text-[9px] font-medium leading-tight">{card.label}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Composer */}
       <div className="flex items-end gap-2 px-4 py-3">
         {/* Emoji button */}
@@ -396,6 +486,24 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
           className="hidden"
           aria-hidden="true"
         />
+
+        {/* Cards gallery button */}
+        <button
+          onClick={() => setShowCardsGallery((prev) => !prev)}
+          disabled={loading || sendingCard}
+          className={cn(
+            "p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 flex-shrink-0 mb-0.5",
+            showCardsGallery ? "text-purple-500 bg-purple-50" : "text-purple-400"
+          )}
+          title="Cards informativos"
+          aria-label="Cards informativos"
+        >
+          {sendingCard ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <LayoutGrid className="h-5 w-5" />
+          )}
+        </button>
 
         {/* Textarea */}
         <div className="flex-1 min-w-0">
