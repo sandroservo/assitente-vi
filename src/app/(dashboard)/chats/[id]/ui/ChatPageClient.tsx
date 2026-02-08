@@ -25,6 +25,8 @@ import {
   X,
   Bell,
   Trash2,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +132,21 @@ export default function ChatPageClient({
   const [editReminderNote, setEditReminderNote] = useState("");
   const [savingReminder, setSavingReminder] = useState(false);
 
+  // Toast modal (substitui alert)
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  // Confirm modal (substitui confirm)
+  const [confirmModal, setConfirmModal] = useState<{ message: string; onConfirm: () => void } | null>(null);
+
+  function showToast(message: string, type: "success" | "error" | "info" = "info") {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  function showConfirm(message: string, onConfirm: () => void) {
+    setConfirmModal({ message, onConfirm });
+  }
+
   const fetchReminders = useCallback(async () => {
     setLoadingReminders(true);
     try {
@@ -152,21 +169,23 @@ export default function ChatPageClient({
   }, [activeTab, fetchReminders]);
 
   async function handleDeleteReminder(reminderId: string) {
-    if (!confirm("Excluir este lembrete?")) return;
-    try {
-      const res = await fetch(`/api/leads/${lead.id}/reminders`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reminderId }),
-      });
-      if (res.ok) {
-        setReminders((prev) => prev.filter((r) => r.id !== reminderId));
-      } else {
-        alert("Erro ao excluir lembrete");
+    showConfirm("Deseja excluir este lembrete?", async () => {
+      try {
+        const res = await fetch(`/api/leads/${lead.id}/reminders`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reminderId }),
+        });
+        if (res.ok) {
+          setReminders((prev) => prev.filter((r) => r.id !== reminderId));
+          showToast("Lembrete excluído", "success");
+        } else {
+          showToast("Erro ao excluir lembrete", "error");
+        }
+      } catch {
+        showToast("Erro ao excluir lembrete", "error");
       }
-    } catch {
-      alert("Erro ao excluir lembrete");
-    }
+    });
   }
 
   function startEditingReminder(rem: { id: string; scheduledAt: string; lastError: string | null }) {
@@ -193,11 +212,12 @@ export default function ChatPageClient({
       if (res.ok) {
         setEditingReminder(null);
         fetchReminders();
+        showToast("Lembrete atualizado", "success");
       } else {
-        alert("Erro ao salvar lembrete");
+        showToast("Erro ao salvar lembrete", "error");
       }
     } catch {
-      alert("Erro ao salvar lembrete");
+      showToast("Erro ao salvar lembrete", "error");
     } finally {
       setSavingReminder(false);
     }
@@ -223,11 +243,12 @@ export default function ChatPageClient({
       if (res.ok) {
         setLead((prev) => ({ ...prev, [field]: editValue.trim() || null }));
         setEditingField(null);
+        showToast("Dados atualizados", "success");
       } else {
-        alert("Erro ao salvar");
+        showToast("Erro ao salvar", "error");
       }
     } catch {
-      alert("Erro ao salvar");
+      showToast("Erro ao salvar", "error");
     } finally {
       setSavingField(false);
     }
@@ -242,9 +263,10 @@ export default function ChatPageClient({
       });
       if (res.ok) {
         setLead((prev) => ({ ...prev, status: newStatus }));
+        showToast("Status atualizado", "success");
       }
     } catch {
-      alert("Erro ao alterar status");
+      showToast("Erro ao alterar status", "error");
     }
   }
 
@@ -257,15 +279,17 @@ export default function ChatPageClient({
           : `/api/leads/${lead.id}/handoff`;
       const res = await fetch(endpoint, { method: "POST" });
       if (!res.ok) {
-        alert("Erro ao alterar atendimento");
+        showToast("Erro ao alterar atendimento", "error");
         return;
       }
-      setLead((prev) => ({
-        ...prev,
-        ownerType: prev.ownerType === "human" ? "bot" : "human",
-      }));
+      const newOwner = lead.ownerType === "human" ? "bot" : "human";
+      setLead((prev) => ({ ...prev, ownerType: newOwner }));
+      showToast(
+        newOwner === "human" ? "Atendimento assumido por você" : "Lead devolvido para Vi",
+        "success"
+      );
     } catch {
-      alert("Erro ao alterar atendimento");
+      showToast("Erro ao alterar atendimento", "error");
     } finally {
       setHandoffLoading(false);
     }
@@ -281,16 +305,16 @@ export default function ChatPageClient({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error ?? "Erro ao agendar");
+        showToast(data.error ?? "Erro ao agendar", "error");
         return;
       }
       if (data.message === "followups already scheduled") {
-        alert("Já existem lembretes agendados para este lead.");
+        showToast("Já existem lembretes agendados para este lead.", "info");
       } else {
-        alert("Lead marcado como Aguardando resposta. Lembretes da Vi agendados para 24h, 48h, 72h e 120h.");
+        showToast("Lead marcado como Aguardando resposta. Lembretes agendados para 24h, 48h, 72h e 120h.", "success");
       }
     } catch {
-      alert("Erro ao marcar cliente parou de responder");
+      showToast("Erro ao marcar cliente parou de responder", "error");
     } finally {
       setParouResponderLoading(false);
     }
@@ -415,7 +439,7 @@ export default function ChatPageClient({
               conversationId={conversationId}
               initialMessages={initialMessages}
             />
-            <ChatComposer conversationId={conversationId} />
+            <ChatComposer conversationId={conversationId} onToast={showToast} />
           </div>
         )}
 
@@ -787,7 +811,65 @@ export default function ChatPageClient({
         conversationId={conversationId}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onToast={showToast}
       />
+
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[60] animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border min-w-[280px] max-w-[420px]",
+              toast.type === "success" && "bg-green-50 border-green-200 text-green-800",
+              toast.type === "error" && "bg-red-50 border-red-200 text-red-800",
+              toast.type === "info" && "bg-blue-50 border-blue-200 text-blue-800"
+            )}
+          >
+            {toast.type === "success" && <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />}
+            {toast.type === "error" && <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />}
+            {toast.type === "info" && <Info className="h-5 w-5 text-blue-500 flex-shrink-0" />}
+            <p className="text-sm font-medium flex-1">{toast.message}</p>
+            <button
+              onClick={() => setToast(null)}
+              className="p-0.5 rounded hover:bg-black/5 transition-colors flex-shrink-0"
+              aria-label="Fechar notificação"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[70] p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in zoom-in-95 fade-in duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-800">{confirmModal.message}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal(null);
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

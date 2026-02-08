@@ -13,12 +13,14 @@ interface ClienteParouResponderButtonProps {
   leadId: string;
   conversationId: string;
   className?: string;
+  onToast?: (message: string, type: "success" | "error" | "info") => void;
 }
 
 export default function ClienteParouResponderButton({
   leadId,
   conversationId,
   className,
+  onToast,
 }: ClienteParouResponderButtonProps) {
   const [loading, setLoading] = useState(false);
 
@@ -33,18 +35,18 @@ export default function ClienteParouResponderButton({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error ?? "Erro ao agendar");
+        onToast?.(data.error ?? "Erro ao agendar", "error");
         return;
       }
       if (data.message === "followups already scheduled") {
-        alert("Já existem lembretes agendados para este lead.");
+        onToast?.("Já existem lembretes agendados para este lead.", "info");
       } else {
-        alert("Lead marcado como Aguardando resposta. Lembretes da Vi agendados para 24h, 48h, 72h e 120h.");
+        onToast?.("Lead marcado como Aguardando resposta. Lembretes agendados.", "success");
       }
       window.location.reload();
     } catch (error) {
       console.error("Erro:", error);
-      alert("Erro ao marcar cliente parou de responder");
+      onToast?.("Erro ao marcar cliente parou de responder", "error");
     } finally {
       setLoading(false);
     }

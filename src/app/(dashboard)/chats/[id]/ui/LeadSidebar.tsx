@@ -49,6 +49,7 @@ interface LeadSidebarProps {
   conversationId: string;
   isOpen: boolean;
   onClose: () => void;
+  onToast?: (message: string, type: "success" | "error" | "info") => void;
 }
 
 function getScoreLabel(score: number) {
@@ -94,6 +95,7 @@ export default function LeadSidebar({
   conversationId,
   isOpen,
   onClose,
+  onToast,
 }: LeadSidebarProps) {
   const scoreInfo = getScoreLabel(lead.leadScore);
 
@@ -211,10 +213,12 @@ export default function LeadSidebar({
         <HandoffButton
           leadId={lead.id}
           isHuman={lead.ownerType === "human"}
+          onToast={onToast}
         />
         <ClienteParouResponderButton
           leadId={lead.id}
           conversationId={conversationId}
+          onToast={onToast}
         />
       </div>
 

@@ -26,9 +26,10 @@ import EmojiPicker from "@/components/chat/EmojiPicker";
 
 interface ChatComposerProps {
   conversationId: string;
+  onToast?: (message: string, type: "success" | "error" | "info") => void;
 }
 
-export default function ChatComposer({ conversationId }: ChatComposerProps) {
+export default function ChatComposer({ conversationId, onToast }: ChatComposerProps) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -90,7 +91,7 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error ?? "Erro ao enviar mensagem");
+        onToast?.(data.error ?? "Erro ao enviar mensagem", "error");
         return;
       }
 
@@ -98,7 +99,7 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
       triggerRefetch();
     } catch (error) {
       console.error("Erro ao enviar:", error);
-      alert("Erro ao enviar mensagem");
+      onToast?.("Erro ao enviar mensagem", "error");
     } finally {
       setLoading(false);
     }
@@ -132,7 +133,7 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
     } catch {
-      alert("Não foi possível acessar o microfone. Verifique as permissões.");
+      onToast?.("Não foi possível acessar o microfone. Verifique as permissões.", "error");
     }
   }
 
@@ -190,14 +191,14 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error ?? "Erro ao enviar áudio");
+        onToast?.(data.error ?? "Erro ao enviar áudio", "error");
         return;
       }
 
       triggerRefetch();
     } catch (error) {
       console.error("Erro ao enviar áudio:", error);
-      alert("Erro ao enviar áudio");
+      onToast?.("Erro ao enviar áudio", "error");
     } finally {
       setLoading(false);
     }
@@ -241,13 +242,13 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || "Erro ao enviar card");
+        onToast?.(data.error || "Erro ao enviar card", "error");
         return;
       }
 
       triggerRefetch();
     } catch {
-      alert("Erro ao enviar card");
+      onToast?.("Erro ao enviar card", "error");
     } finally {
       setSendingCard(false);
     }
@@ -305,7 +306,7 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error ?? "Erro ao enviar arquivo");
+        onToast?.(data.error ?? "Erro ao enviar arquivo", "error");
         return;
       }
 
@@ -314,7 +315,7 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
       triggerRefetch();
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
-      alert("Erro ao enviar arquivo");
+      onToast?.("Erro ao enviar arquivo", "error");
     } finally {
       setLoading(false);
     }

@@ -12,9 +12,10 @@ import { UserCheck, Bot, Loader2 } from "lucide-react";
 interface HandoffButtonProps {
   leadId: string;
   isHuman: boolean;
+  onToast?: (message: string, type: "success" | "error" | "info") => void;
 }
 
-export default function HandoffButton({ leadId, isHuman }: HandoffButtonProps) {
+export default function HandoffButton({ leadId, isHuman, onToast }: HandoffButtonProps) {
   const [loading, setLoading] = useState(false);
 
   async function handleHandoff() {
@@ -28,14 +29,15 @@ export default function HandoffButton({ leadId, isHuman }: HandoffButtonProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error ?? "Erro ao assumir lead");
+        onToast?.(data.error ?? "Erro ao assumir lead", "error");
         return;
       }
 
+      onToast?.("Atendimento assumido com sucesso", "success");
       window.location.reload();
     } catch (error) {
       console.error("Erro ao assumir:", error);
-      alert("Erro ao assumir lead");
+      onToast?.("Erro ao assumir lead", "error");
     } finally {
       setLoading(false);
     }
@@ -52,14 +54,15 @@ export default function HandoffButton({ leadId, isHuman }: HandoffButtonProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error ?? "Erro ao devolver para o bot");
+        onToast?.(data.error ?? "Erro ao devolver para o bot", "error");
         return;
       }
 
+      onToast?.("Lead devolvido para Vi", "success");
       window.location.reload();
     } catch (error) {
       console.error("Erro ao devolver:", error);
-      alert("Erro ao devolver para o bot");
+      onToast?.("Erro ao devolver para o bot", "error");
     } finally {
       setLoading(false);
     }
