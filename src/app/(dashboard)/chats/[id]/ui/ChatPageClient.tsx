@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Bot,
   UserCheck,
@@ -23,6 +23,8 @@ import {
   Clock,
   Pencil,
   X,
+  Bell,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +121,31 @@ export default function ChatPageClient({
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [savingField, setSavingField] = useState(false);
+
+  // Lembretes
+  const [reminders, setReminders] = useState<Array<{ id: string; scheduledAt: string; lastError: string | null; status: string }>>([]);
+  const [loadingReminders, setLoadingReminders] = useState(false);
+
+  const fetchReminders = useCallback(async () => {
+    setLoadingReminders(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/reminders`);
+      if (res.ok) {
+        const data = await res.json();
+        setReminders(data.reminders || []);
+      }
+    } catch {
+      console.error("Erro ao buscar lembretes");
+    } finally {
+      setLoadingReminders(false);
+    }
+  }, [lead.id]);
+
+  useEffect(() => {
+    if (activeTab === "detalhes") {
+      fetchReminders();
+    }
+  }, [activeTab, fetchReminders]);
 
   const displayName = lead.name || lead.pushName || "Sem nome";
   const badge = getStatusBadge(lead.status, lead.ownerType);
@@ -538,6 +565,53 @@ export default function ChatPageClient({
                 </div>
               </div>
             )}
+
+            {/* Lembretes */}
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Bell className="h-4 w-4 text-pink-500" />
+                <h3 className="font-semibold text-sm">Lembretes</h3>
+                {loadingReminders && (
+                  <RefreshCw className="h-3 w-3 text-gray-400 animate-spin ml-auto" />
+                )}
+              </div>
+              {reminders.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">
+                  {loadingReminders ? "Carregando..." : "Nenhum lembrete agendado"}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {reminders.map((rem) => {
+                    const date = new Date(rem.scheduledAt);
+                    const isPast = date < new Date();
+                    return (
+                      <div
+                        key={rem.id}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg text-sm",
+                          isPast ? "bg-gray-50 opacity-60" : "bg-amber-50 border border-amber-200"
+                        )}
+                      >
+                        <Clock className={cn("h-4 w-4 flex-shrink-0", isPast ? "text-gray-400" : "text-amber-500")} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">
+                            {date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                            {" às "}
+                            {date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                          {rem.lastError && (
+                            <p className="text-xs text-gray-500 truncate">{rem.lastError}</p>
+                          )}
+                        </div>
+                        {isPast && (
+                          <span className="text-[10px] text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">Expirado</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
