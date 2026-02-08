@@ -18,8 +18,11 @@ import {
   X,
   Image as ImageIcon,
   FileText,
+  Smile,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
 
 interface ChatComposerProps {
   conversationId: string;
@@ -32,8 +35,10 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
   const [recordingTime, setRecordingTime] = useState(0);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachedPreview, setAttachedPreview] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -47,6 +52,41 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
       el.style.height = Math.min(el.scrollHeight, 120) + "px";
     }
   }, [text]);
+
+  // Fecha emoji picker ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(e.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    }
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
+
+  function handleEmojiSelect(emoji: any) {
+    const native = emoji.native as string;
+    const el = textareaRef.current;
+    if (el) {
+      const start = el.selectionStart ?? text.length;
+      const end = el.selectionEnd ?? text.length;
+      const newText = text.slice(0, start) + native + text.slice(end);
+      setText(newText);
+      // Reposiciona cursor após o emoji
+      requestAnimationFrame(() => {
+        el.focus();
+        const pos = start + native.length;
+        el.setSelectionRange(pos, pos);
+      });
+    } else {
+      setText((prev) => prev + native);
+    }
+  }
 
   function triggerRefetch() {
     if (typeof window !== "undefined" && (window as any).__inboxRefetch) {
@@ -336,6 +376,36 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
 
       {/* Composer */}
       <div className="flex items-end gap-2 px-4 py-3">
+        {/* Emoji button */}
+        <div className="relative flex-shrink-0 mb-0.5" ref={emojiPickerRef}>
+          <button
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            disabled={loading}
+            className={cn(
+              "p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50",
+              showEmojiPicker ? "text-pink-500 bg-pink-50" : "text-gray-500"
+            )}
+            title="Emojis"
+            aria-label="Abrir seletor de emojis"
+          >
+            <Smile className="h-5 w-5" />
+          </button>
+          {showEmojiPicker && (
+            <div className="absolute bottom-12 left-0 z-50 shadow-xl rounded-xl overflow-hidden">
+              <Picker
+                data={data}
+                onEmojiSelect={handleEmojiSelect}
+                theme="light"
+                locale="pt"
+                previewPosition="none"
+                skinTonePosition="search"
+                maxFrequentRows={2}
+                perLine={8}
+              />
+            </div>
+          )}
+        </div>
+
         {/* Attach button */}
         <button
           onClick={() => fileInputRef.current?.click()}
