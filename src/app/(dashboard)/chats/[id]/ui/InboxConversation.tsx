@@ -173,53 +173,67 @@ export default function InboxConversation({
           const showDate = shouldShowDateSeparator(m, prev);
           const isOut = m.direction === "out";
           const isMediaType = m.type !== "text";
+          const isHuman = m.sentByUserName != null;
 
           return (
             <div key={m.id}>
               {/* Date separator */}
               {showDate && (
-                <div className="flex items-center justify-center my-3">
-                  <span className="text-[11px] bg-white/90 text-gray-500 px-3 py-1 rounded-lg shadow-sm font-medium">
+                <div className="flex justify-center my-4">
+                  <span className="bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-lg text-xs text-gray-600 shadow-sm font-medium">
                     {formatDateSeparator(m.createdAt)}
                   </span>
                 </div>
               )}
 
-              {/* Message bubble */}
+              {/* Message bubble with avatar */}
               <div
                 className={cn(
-                  "flex mb-0.5",
+                  "flex mb-3",
                   isOut ? "justify-end" : "justify-start"
                 )}
               >
                 <div
                   className={cn(
-                    "relative max-w-[75%] px-3 py-1.5 rounded-lg shadow-sm",
-                    isOut
-                      ? "bg-[#d9fdd3] text-gray-800 rounded-tr-none"
-                      : "bg-white text-gray-800 rounded-tl-none"
+                    "max-w-[75%] md:max-w-[65%] flex gap-2",
+                    isOut ? "flex-row-reverse" : "flex-row"
                   )}
                 >
-                  {/* Sender label for outgoing */}
-                  {isOut && m.sentByUserName && (
-                    <p className="text-[10px] font-semibold text-emerald-700 mb-0.5 flex items-center gap-1">
-                      <UserCheck className="h-2.5 w-2.5" />
-                      {m.sentByUserName}
-                    </p>
-                  )}
-                  {isOut && !m.sentByUserName && (
-                    <p className="text-[10px] font-semibold text-blue-600 mb-0.5 flex items-center gap-1">
-                      <Bot className="h-2.5 w-2.5" />
-                      Vi
-                    </p>
+                  {/* Avatar */}
+                  {isOut ? (
+                    <div className={cn(
+                      "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ring-2 ring-white shadow-sm",
+                      isHuman
+                        ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white"
+                        : "bg-gradient-to-br from-pink-500 to-pink-600 text-white"
+                    )}>
+                      {isHuman
+                        ? m.sentByUserName!.split(" ")[0][0].toUpperCase()
+                        : "Vi"}
+                    </div>
+                  ) : (
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold bg-gradient-to-br from-gray-400 to-gray-500 text-white ring-2 ring-white shadow-sm">
+                      ?
+                    </div>
                   )}
 
-                  {/* Message body */}
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1 min-w-0">
+                  <div className="flex flex-col">
+                    {/* Bubble */}
+                    <div
+                      className={cn(
+                        "relative px-4 py-2.5 shadow-sm",
+                        isOut
+                          ? isHuman
+                            ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl rounded-tr-md"
+                            : "bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-2xl rounded-tr-md"
+                          : "bg-white text-gray-800 rounded-2xl rounded-tl-md"
+                      )}
+                    >
+                      {/* Media type indicator */}
                       {isMediaType && (
                         <span className={cn(
                           "inline-flex items-center text-xs font-medium mb-0.5",
+                          isOut ? "text-white/80" :
                           m.type === "audio" ? "text-purple-600" :
                           m.type === "image" ? "text-blue-600" :
                           m.type === "video" ? "text-red-600" :
@@ -232,16 +246,33 @@ export default function InboxConversation({
                            "Documento"}
                         </span>
                       )}
-                      <p className="text-[13.5px] leading-[1.35] whitespace-pre-wrap break-words">
+                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">
                         {m.body ?? ""}
                       </p>
+                      <div className={cn(
+                        "flex items-center gap-1 mt-1",
+                        isOut ? "justify-end" : "justify-start"
+                      )}>
+                        <span className={cn(
+                          "text-[10px]",
+                          isOut ? "text-white/70" : "text-gray-400"
+                        )}>
+                          {formatTime(m.createdAt)}
+                        </span>
+                        {isOut && (
+                          <span className="text-white/70 text-[10px]">✓✓</span>
+                        )}
+                      </div>
                     </div>
-                    <span className={cn(
-                      "text-[10px] whitespace-nowrap self-end pb-0.5 flex-shrink-0",
-                      isOut ? "text-gray-500" : "text-gray-400"
+                    {/* Sender label below bubble */}
+                    <p className={cn(
+                      "text-[10px] text-gray-500 mt-1 px-1",
+                      isOut ? "text-right" : "text-left"
                     )}>
-                      {formatTime(m.createdAt)}
-                    </span>
+                      {isOut
+                        ? m.sentByUserName || "Vi"
+                        : "Lead"}
+                    </p>
                   </div>
                 </div>
               </div>

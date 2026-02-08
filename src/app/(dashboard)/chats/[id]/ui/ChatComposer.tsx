@@ -340,39 +340,43 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
   // Recording mode
   if (isRecording) {
     return (
-      <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border-t">
-        <button
-          onClick={cancelRecording}
-          className="p-2 rounded-full hover:bg-red-100 transition-colors"
-          aria-label="Cancelar gravação"
-        >
-          <X className="h-5 w-5 text-red-500" />
-        </button>
-        <div className="flex-1 flex items-center gap-3">
-          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-          <span className="text-sm font-mono text-red-600">
-            {formatSeconds(recordingTime)}
-          </span>
-          <span className="text-sm text-red-500">Gravando...</span>
+      <div className="bg-[#f0f2f5] border-t p-3 md:p-4">
+        <div className="flex items-center gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full hover:bg-red-50 text-red-500"
+            onClick={cancelRecording}
+            aria-label="Cancelar gravação"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+          <div className="flex-1 flex items-center gap-3">
+            <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-sm font-medium text-red-600">
+              Gravando {formatSeconds(recordingTime)}
+            </span>
+          </div>
+          <Button
+            onClick={stopRecording}
+            disabled={loading}
+            size="icon"
+            className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+            aria-label="Enviar áudio"
+          >
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+          </Button>
         </div>
-        <button
-          onClick={stopRecording}
-          disabled={loading}
-          className="p-2.5 bg-red-500 hover:bg-red-600 rounded-full text-white transition-colors disabled:opacity-50"
-          aria-label="Parar e enviar gravação"
-        >
-          {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Send className="h-5 w-5" />
-          )}
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="border-t bg-white">
+    <div>
       {/* Attachment preview */}
       {attachedFile && (
         <div className="px-4 pt-3 pb-1">
@@ -444,109 +448,122 @@ export default function ChatComposer({ conversationId }: ChatComposerProps) {
         </div>
       )}
 
-      {/* Composer */}
-      <div className="flex items-end gap-2 px-4 py-3">
-        {/* Emoji button */}
-        <div className="relative flex-shrink-0 mb-0.5">
-          <button
-            onClick={() => setShowEmojiPicker((prev) => !prev)}
-            disabled={loading}
-            className={cn(
-              "p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50",
-              showEmojiPicker ? "text-pink-500 bg-pink-50" : "text-gray-500"
-            )}
-            title="Emojis"
-            aria-label="Abrir seletor de emojis"
-          >
-            <Smile className="h-5 w-5" />
-          </button>
-          {showEmojiPicker && (
-            <EmojiPicker
-              onSelect={handleEmojiSelect}
-              onClose={() => setShowEmojiPicker(false)}
-            />
-          )}
-        </div>
+      {/* Input file oculto */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+        onChange={handleFileSelect}
+        className="hidden"
+        aria-hidden="true"
+      />
 
-        {/* Attach button */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={loading}
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 disabled:opacity-50 flex-shrink-0 mb-0.5"
-          title="Anexar arquivo ou imagem"
-          aria-label="Anexar arquivo ou imagem"
-        >
-          <Paperclip className="h-5 w-5" />
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-          onChange={handleFileSelect}
-          className="hidden"
-          aria-hidden="true"
-        />
+      {/* Composer — pill style */}
+      <div className="bg-[#f0f2f5] border-t p-3 md:p-4 flex-shrink-0">
+        <div className="flex items-center gap-2 md:gap-3 bg-white rounded-full px-4 py-2 shadow-sm">
+          {/* Emoji */}
+          <div className="relative flex items-center gap-1">
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-9 w-9 rounded-full",
+                  showEmojiPicker ? "bg-pink-50 text-pink-500" : "hover:bg-gray-100 text-gray-500"
+                )}
+                onClick={() => setShowEmojiPicker((prev) => !prev)}
+                title="Emojis"
+                aria-label="Abrir seletor de emojis"
+              >
+                <Smile className="h-5 w-5" />
+              </Button>
+              {showEmojiPicker && (
+                <EmojiPicker
+                  onSelect={handleEmojiSelect}
+                  onClose={() => setShowEmojiPicker(false)}
+                />
+              )}
+            </div>
+            {/* Attach */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full hover:bg-gray-100"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sendingCard}
+              title="Enviar arquivo"
+              aria-label="Enviar arquivo"
+            >
+              <Paperclip className="h-5 w-5 text-gray-500" />
+            </Button>
+            {/* Cards */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full hover:bg-purple-50"
+              onClick={() => setShowCardsGallery((prev) => !prev)}
+              disabled={sendingCard}
+              title="Cards dos planos"
+              aria-label="Cards informativos"
+            >
+              {sendingCard ? (
+                <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+              ) : (
+                <LayoutGrid className="h-5 w-5 text-purple-500" />
+              )}
+            </Button>
+          </div>
 
-        {/* Cards gallery button */}
-        <button
-          onClick={() => setShowCardsGallery((prev) => !prev)}
-          disabled={loading || sendingCard}
-          className={cn(
-            "p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 flex-shrink-0 mb-0.5",
-            showCardsGallery ? "text-purple-500 bg-purple-50" : "text-purple-400"
-          )}
-          title="Cards informativos"
-          aria-label="Cards informativos"
-        >
-          {sendingCard ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <LayoutGrid className="h-5 w-5" />
-          )}
-        </button>
-
-        {/* Textarea */}
-        <div className="flex-1 min-w-0">
+          {/* Input */}
           <textarea
             ref={textareaRef}
-            placeholder={attachedFile ? "Legenda (opcional)..." : "Digite sua mensagem..."}
+            placeholder={attachedFile ? "Legenda (opcional)..." : "Digite uma mensagem..."}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={loading}
             rows={1}
-            className="w-full resize-none rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400 transition-colors disabled:opacity-50"
+            className="flex-1 border-0 bg-transparent resize-none focus:outline-none focus:ring-0 placeholder:text-gray-400 text-sm py-1.5 disabled:opacity-50"
             style={{ maxHeight: "120px" }}
             aria-label="Campo de mensagem"
           />
-        </div>
 
-        {/* Send or Mic */}
-        {text.trim() || attachedFile ? (
-          <Button
-            onClick={attachedFile ? sendFile : sendText}
-            disabled={loading || (!text.trim() && !attachedFile)}
-            size="icon"
-            className="rounded-full h-10 w-10 bg-pink-500 hover:bg-pink-600 flex-shrink-0 mb-0.5"
-            aria-label="Enviar mensagem"
-          >
-            {loading ? (
+          {/* Send / Mic */}
+          {sendingCard ? (
+            <Button
+              disabled
+              size="icon"
+              className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 shadow-md"
+            >
               <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
-          </Button>
-        ) : (
-          <button
-            onClick={startRecording}
-            disabled={loading}
-            className="p-2.5 rounded-full bg-pink-500 hover:bg-pink-600 text-white transition-colors disabled:opacity-50 flex-shrink-0 mb-0.5"
-            title="Gravar áudio"
-            aria-label="Gravar áudio"
-          >
-            <Mic className="h-5 w-5" />
-          </button>
-        )}
+            </Button>
+          ) : text.trim() || attachedFile ? (
+            <Button
+              onClick={attachedFile ? sendFile : sendText}
+              disabled={loading || (!text.trim() && !attachedFile)}
+              size="icon"
+              className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+              aria-label="Enviar mensagem"
+            >
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={startRecording}
+              disabled={loading}
+              size="icon"
+              className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+              title="Gravar áudio"
+              aria-label="Gravar áudio"
+            >
+              <Mic className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
