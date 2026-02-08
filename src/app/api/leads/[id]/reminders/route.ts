@@ -77,3 +77,75 @@ export async function GET(
         return NextResponse.json({ reminders: [] }, { status: 500 });
     }
 }
+
+// DELETE - Exclui um lembrete
+export async function DELETE(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id: leadId } = await params;
+        const { reminderId } = await req.json();
+
+        if (!reminderId) {
+            return NextResponse.json(
+                { error: "reminderId é obrigatório" },
+                { status: 400 }
+            );
+        }
+
+        await prisma.followUp.delete({
+            where: { id: reminderId, leadId, status: "reminder" },
+        });
+
+        return NextResponse.json({ ok: true });
+    } catch (error) {
+        console.error("Erro ao excluir lembrete:", error);
+        return NextResponse.json(
+            { error: "Erro ao excluir lembrete" },
+            { status: 500 }
+        );
+    }
+}
+
+// PATCH - Edita um lembrete (data e/ou nota)
+export async function PATCH(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id: leadId } = await params;
+        const { reminderId, scheduledAt, note } = await req.json();
+
+        if (!reminderId) {
+            return NextResponse.json(
+                { error: "reminderId é obrigatório" },
+                { status: 400 }
+            );
+        }
+
+        const updateData: Record<string, unknown> = {};
+        if (scheduledAt) updateData.scheduledAt = new Date(scheduledAt);
+        if (note !== undefined) updateData.lastError = note || null;
+
+        if (Object.keys(updateData).length === 0) {
+            return NextResponse.json(
+                { error: "Nenhum campo para atualizar" },
+                { status: 400 }
+            );
+        }
+
+        const reminder = await prisma.followUp.update({
+            where: { id: reminderId, leadId, status: "reminder" },
+            data: updateData,
+        });
+
+        return NextResponse.json({ ok: true, reminder });
+    } catch (error) {
+        console.error("Erro ao editar lembrete:", error);
+        return NextResponse.json(
+            { error: "Erro ao editar lembrete" },
+            { status: 500 }
+        );
+    }
+}

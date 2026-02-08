@@ -125,6 +125,10 @@ export default function ChatPageClient({
   // Lembretes
   const [reminders, setReminders] = useState<Array<{ id: string; scheduledAt: string; lastError: string | null; status: string }>>([]);
   const [loadingReminders, setLoadingReminders] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<string | null>(null);
+  const [editReminderDate, setEditReminderDate] = useState("");
+  const [editReminderNote, setEditReminderNote] = useState("");
+  const [savingReminder, setSavingReminder] = useState(false);
 
   const fetchReminders = useCallback(async () => {
     setLoadingReminders(true);
@@ -146,6 +150,58 @@ export default function ChatPageClient({
       fetchReminders();
     }
   }, [activeTab, fetchReminders]);
+
+  async function handleDeleteReminder(reminderId: string) {
+    if (!confirm("Excluir este lembrete?")) return;
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/reminders`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reminderId }),
+      });
+      if (res.ok) {
+        setReminders((prev) => prev.filter((r) => r.id !== reminderId));
+      } else {
+        alert("Erro ao excluir lembrete");
+      }
+    } catch {
+      alert("Erro ao excluir lembrete");
+    }
+  }
+
+  function startEditingReminder(rem: { id: string; scheduledAt: string; lastError: string | null }) {
+    setEditingReminder(rem.id);
+    const d = new Date(rem.scheduledAt);
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    setEditReminderDate(local);
+    setEditReminderNote(rem.lastError || "");
+  }
+
+  async function handleSaveReminder(reminderId: string) {
+    if (savingReminder) return;
+    setSavingReminder(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/reminders`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reminderId,
+          scheduledAt: editReminderDate,
+          note: editReminderNote,
+        }),
+      });
+      if (res.ok) {
+        setEditingReminder(null);
+        fetchReminders();
+      } else {
+        alert("Erro ao salvar lembrete");
+      }
+    } catch {
+      alert("Erro ao salvar lembrete");
+    } finally {
+      setSavingReminder(false);
+    }
+  }
 
   const displayName = lead.name || lead.pushName || "Sem nome";
   const badge = getStatusBadge(lead.status, lead.ownerType);
@@ -584,12 +640,57 @@ export default function ChatPageClient({
                   {reminders.map((rem) => {
                     const date = new Date(rem.scheduledAt);
                     const isPast = date < new Date();
+                    const isEditing = editingReminder === rem.id;
+
+                    if (isEditing) {
+                      return (
+                        <div key={rem.id} className="p-3 rounded-lg bg-blue-50 border border-blue-200 space-y-2">
+                          <div>
+                            <label htmlFor={`rem-date-${rem.id}`} className="block text-[11px] text-gray-500 uppercase tracking-wider mb-1">Data e Hora</label>
+                            <input
+                              id={`rem-date-${rem.id}`}
+                              type="datetime-local"
+                              value={editReminderDate}
+                              onChange={(e) => setEditReminderDate(e.target.value)}
+                              className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor={`rem-note-${rem.id}`} className="block text-[11px] text-gray-500 uppercase tracking-wider mb-1">Nota</label>
+                            <input
+                              id={`rem-note-${rem.id}`}
+                              type="text"
+                              value={editReminderNote}
+                              onChange={(e) => setEditReminderNote(e.target.value)}
+                              placeholder="Nota do lembrete..."
+                              className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                            />
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={() => handleSaveReminder(rem.id)}
+                              disabled={savingReminder || !editReminderDate}
+                              className="flex-1 px-3 py-1.5 text-xs font-medium bg-pink-500 text-white rounded-lg hover:bg-pink-600 disabled:opacity-50 transition-colors"
+                            >
+                              {savingReminder ? "Salvando..." : "Salvar"}
+                            </button>
+                            <button
+                              onClick={() => setEditingReminder(null)}
+                              className="px-3 py-1.5 text-xs font-medium bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div
                         key={rem.id}
                         className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg text-sm",
-                          isPast ? "bg-gray-50 opacity-60" : "bg-amber-50 border border-amber-200"
+                          "flex items-center gap-3 p-3 rounded-lg text-sm group",
+                          isPast ? "bg-gray-50 opacity-70" : "bg-amber-50 border border-amber-200"
                         )}
                       >
                         <Clock className={cn("h-4 w-4 flex-shrink-0", isPast ? "text-gray-400" : "text-amber-500")} />
@@ -604,8 +705,26 @@ export default function ChatPageClient({
                           )}
                         </div>
                         {isPast && (
-                          <span className="text-[10px] text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">Expirado</span>
+                          <span className="text-[10px] text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full flex-shrink-0">Expirado</span>
                         )}
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <button
+                            onClick={() => startEditingReminder(rem)}
+                            className="p-1 rounded hover:bg-white/80 transition-colors"
+                            title="Editar lembrete"
+                            aria-label="Editar lembrete"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-gray-500 hover:text-pink-500" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReminder(rem.id)}
+                            className="p-1 rounded hover:bg-white/80 transition-colors"
+                            title="Excluir lembrete"
+                            aria-label="Excluir lembrete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-gray-500 hover:text-red-500" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
