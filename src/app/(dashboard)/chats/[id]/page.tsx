@@ -44,6 +44,7 @@ export default async function ChatDetailPage({
 
   const lead = {
     id: convo.lead.id,
+    organizationId: convo.lead.organizationId,
     name: convo.lead.name,
     pushName: convo.lead.pushName,
     avatarUrl: convo.lead.avatarUrl,
@@ -54,6 +55,7 @@ export default async function ChatDetailPage({
     ownerType: convo.lead.ownerType as string,
     leadScore: (convo.lead as any).leadScore ?? 0,
     summary: convo.lead.summary,
+    notes: convo.lead.notes,
     tags: convo.lead.tags,
   };
 

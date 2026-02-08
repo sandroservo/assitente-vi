@@ -33,6 +33,7 @@ interface Tag {
 interface LeadSidebarProps {
   lead: {
     id: string;
+    organizationId: string;
     name: string | null;
     pushName: string | null;
     avatarUrl: string | null;
@@ -225,6 +226,7 @@ export default function LeadSidebar({
           leadId={lead.id}
           leadName={lead.name}
           leadTags={lead.tags}
+          organizationId={lead.organizationId}
         />
       </div>
 

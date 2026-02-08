@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 const VALID_LEAD_STATUS = [
   "NOVO",
   "EM_ATENDIMENTO",
+  "CONSCIENTIZADO",
   "QUALIFICADO",
   "LEAD_FRIO",
   "PROPOSTA_ENVIADA",

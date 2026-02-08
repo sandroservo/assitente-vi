@@ -31,6 +31,7 @@ interface LeadActionsProps {
     leadId: string;
     leadName: string | null;
     leadTags?: Tag[];
+    organizationId: string;
     onNameUpdate?: (name: string) => void;
 }
 
@@ -38,6 +39,7 @@ export default function LeadActions({
     leadId,
     leadName,
     leadTags = [],
+    organizationId,
     onNameUpdate
 }: LeadActionsProps) {
     const [isEditingName, setIsEditingName] = useState(false);
@@ -109,7 +111,7 @@ export default function LeadActions({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: newTagName.trim(),
-                    organizationId: "default" // TODO: Get from session
+                    organizationId,
                 }),
             });
 

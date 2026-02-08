@@ -21,6 +21,8 @@ import {
   MapPin,
   CheckCircle2,
   Clock,
+  Pencil,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +38,7 @@ interface Tag {
 
 interface Lead {
   id: string;
+  organizationId: string;
   name: string | null;
   pushName: string | null;
   avatarUrl: string | null;
@@ -46,6 +49,7 @@ interface Lead {
   ownerType: string;
   leadScore: number;
   summary: string | null;
+  notes: string | null;
   tags: Tag[];
 }
 
@@ -111,8 +115,55 @@ export default function ChatPageClient({
   const [handoffLoading, setHandoffLoading] = useState(false);
   const [parouResponderLoading, setParouResponderLoading] = useState(false);
 
+  // Edição inline na aba Detalhes
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [savingField, setSavingField] = useState(false);
+
   const displayName = lead.name || lead.pushName || "Sem nome";
   const badge = getStatusBadge(lead.status, lead.ownerType);
+
+  function startEditing(field: string, currentValue: string | null) {
+    setEditingField(field);
+    setEditValue(currentValue || "");
+  }
+
+  async function saveField(field: string) {
+    if (savingField) return;
+    setSavingField(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/update`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: editValue.trim() || null }),
+      });
+      if (res.ok) {
+        setLead((prev) => ({ ...prev, [field]: editValue.trim() || null }));
+        setEditingField(null);
+      } else {
+        alert("Erro ao salvar");
+      }
+    } catch {
+      alert("Erro ao salvar");
+    } finally {
+      setSavingField(false);
+    }
+  }
+
+  async function handleStatusChange(newStatus: string) {
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setLead((prev) => ({ ...prev, status: newStatus }));
+      }
+    } catch {
+      alert("Erro ao alterar status");
+    }
+  }
 
   async function handleHandoff() {
     setHandoffLoading(true);
@@ -288,21 +339,48 @@ export default function ChatPageClient({
         {/* Tab: Detalhes */}
         {activeTab === "detalhes" && (
           <div className="flex-1 p-6 overflow-auto space-y-4">
-            {/* Dados coletados pela Vi */}
+            {/* Dados do Lead — editáveis */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-2 h-2 rounded-full bg-pink-500" />
-                <h3 className="font-semibold text-sm">Dados Coletados pela Vi</h3>
+                <h3 className="font-semibold text-sm">Dados do Lead</h3>
               </div>
               <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                {/* Nome */}
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 group">
                   <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] text-gray-400 uppercase tracking-wider">Nome</p>
-                    <p className="text-sm font-medium truncate">{lead.name || lead.pushName || "Aguardando..."}</p>
+                    {editingField === "name" ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="flex-1 px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                          autoFocus
+                          onKeyDown={(e) => e.key === "Enter" && saveField("name")}
+                          aria-label="Editar nome"
+                        />
+                        <button onClick={() => saveField("name")} disabled={savingField} className="text-green-600 hover:text-green-700">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => setEditingField(null)} className="text-gray-400 hover:text-gray-600">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm font-medium truncate">{lead.name || lead.pushName || "Não informado"}</p>
+                    )}
                   </div>
-                  {(lead.name || lead.pushName) && <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />}
+                  {editingField !== "name" && (
+                    <button onClick={() => startEditing("name", lead.name)} className="opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Editar nome">
+                      <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-pink-500" />
+                    </button>
+                  )}
                 </div>
+
+                {/* Telefone (somente leitura) */}
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
                   <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -311,32 +389,76 @@ export default function ChatPageClient({
                   </div>
                   <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                 </div>
-                <div className={`flex items-center gap-3 p-3 rounded-lg ${lead.email ? "bg-gray-50" : "bg-amber-50 border border-amber-200"}`}>
+
+                {/* Email */}
+                <div className={`flex items-center gap-3 p-3 rounded-lg group ${lead.email ? "bg-gray-50" : "bg-amber-50 border border-amber-200"}`}>
                   <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] text-gray-400 uppercase tracking-wider">Email</p>
-                    <p className={`text-sm font-medium truncate ${!lead.email ? "text-amber-600 italic" : ""}`}>
-                      {lead.email || "Vi irá solicitar..."}
-                    </p>
+                    {editingField === "email" ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="email"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="flex-1 px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                          autoFocus
+                          onKeyDown={(e) => e.key === "Enter" && saveField("email")}
+                          aria-label="Editar email"
+                        />
+                        <button onClick={() => saveField("email")} disabled={savingField} className="text-green-600 hover:text-green-700">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => setEditingField(null)} className="text-gray-400 hover:text-gray-600">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className={`text-sm font-medium truncate ${!lead.email ? "text-amber-600 italic" : ""}`}>
+                        {lead.email || "Vi irá solicitar..."}
+                      </p>
+                    )}
                   </div>
-                  {lead.email ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <Clock className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  {editingField !== "email" && (
+                    <button onClick={() => startEditing("email", lead.email)} className="opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Editar email">
+                      <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-pink-500" />
+                    </button>
                   )}
                 </div>
-                <div className={`flex items-center gap-3 p-3 rounded-lg ${lead.city ? "bg-gray-50" : "bg-amber-50 border border-amber-200"}`}>
+
+                {/* Cidade */}
+                <div className={`flex items-center gap-3 p-3 rounded-lg group ${lead.city ? "bg-gray-50" : "bg-amber-50 border border-amber-200"}`}>
                   <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] text-gray-400 uppercase tracking-wider">Cidade</p>
-                    <p className={`text-sm font-medium truncate ${!lead.city ? "text-amber-600 italic" : ""}`}>
-                      {lead.city || "Vi irá solicitar..."}
-                    </p>
+                    {editingField === "city" ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="flex-1 px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                          autoFocus
+                          onKeyDown={(e) => e.key === "Enter" && saveField("city")}
+                          aria-label="Editar cidade"
+                        />
+                        <button onClick={() => saveField("city")} disabled={savingField} className="text-green-600 hover:text-green-700">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => setEditingField(null)} className="text-gray-400 hover:text-gray-600">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className={`text-sm font-medium truncate ${!lead.city ? "text-amber-600 italic" : ""}`}>
+                        {lead.city || "Vi irá solicitar..."}
+                      </p>
+                    )}
                   </div>
-                  {lead.city ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <Clock className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  {editingField !== "city" && (
+                    <button onClick={() => startEditing("city", lead.city)} className="opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Editar cidade">
+                      <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-pink-500" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -345,17 +467,47 @@ export default function ChatPageClient({
             {/* Status e Score */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h3 className="font-semibold text-sm mb-4">Status & Qualificação</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="p-3 rounded-lg bg-gray-50">
-                  <p className="text-[11px] text-gray-400 uppercase tracking-wider">Status</p>
-                  <p className="font-medium">{lead.status.replace(/_/g, " ")}</p>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1.5">Status do Lead</p>
+                  <select
+                    value={lead.status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-pink-500 focus:outline-none cursor-pointer"
+                    aria-label="Alterar status do lead"
+                  >
+                    <option value="NOVO">Novo</option>
+                    <option value="EM_ATENDIMENTO">Em Atendimento</option>
+                    <option value="CONSCIENTIZADO">Conscientizado</option>
+                    <option value="QUALIFICADO">Qualificado</option>
+                    <option value="PROPOSTA_ENVIADA">Proposta Enviada</option>
+                    <option value="EM_NEGOCIACAO">Em Negociação</option>
+                    <option value="AGUARDANDO_RESPOSTA">Aguardando Resposta</option>
+                    <option value="FECHADO">Fechado</option>
+                    <option value="LEAD_FRIO">Lead Frio</option>
+                    <option value="PERDIDO">Perdido</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                  <div className="flex-1">
+                    <p className="text-[11px] text-gray-400 uppercase tracking-wider">Atendimento</p>
+                    <p className="text-sm font-medium">{lead.ownerType === "human" ? "Humano" : "Bot (Vi)"}</p>
+                  </div>
+                  <button
+                    onClick={handleHandoff}
+                    disabled={handoffLoading}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50",
+                      lead.ownerType === "human"
+                        ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                        : "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                    )}
+                  >
+                    {lead.ownerType === "human" ? "Devolver p/ Vi" : "Assumir"}
+                  </button>
                 </div>
                 <div className="p-3 rounded-lg bg-gray-50">
-                  <p className="text-[11px] text-gray-400 uppercase tracking-wider">Atendimento</p>
-                  <p className="font-medium">{lead.ownerType === "human" ? "👤 Humano" : "🤖 Bot (Vi)"}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-gray-50 col-span-2">
-                  <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Lead Score</p>
+                  <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1.5">Lead Score</p>
                   <div className="flex items-center gap-3">
                     <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
