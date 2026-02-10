@@ -68,6 +68,22 @@ function shouldShowDateSeparator(
   return currDate !== prevDate;
 }
 
+function ReadReceipt({ isOut }: { isOut: boolean }) {
+  if (!isOut) return null;
+  return (
+    <svg viewBox="0 0 16 11" width="16" height="11" className="inline-block ml-1 flex-shrink-0">
+      <path
+        d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.66.017.52.52 0 0 0 .016.678l2.34 2.438a.456.456 0 0 0 .327.146h.008a.456.456 0 0 0 .33-.157l6.532-8.054a.52.52 0 0 0-.007-.685z"
+        fill="#53bdeb"
+      />
+      <path
+        d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-1.2-1.25-.66.814 1.86 1.938a.456.456 0 0 0 .327.146h.008a.456.456 0 0 0 .33-.157l6.532-8.054a.52.52 0 0 0-.007-.685z"
+        fill="#53bdeb"
+      />
+    </svg>
+  );
+}
+
 function MessageTypeIcon({ type }: { type: string }) {
   switch (type) {
     case "audio":
@@ -316,9 +332,7 @@ export default function InboxConversation({
                         )}>
                           {formatTime(m.createdAt)}
                         </span>
-                        {isOut && (
-                          <span className="text-white/70 text-[10px]">✓✓</span>
-                        )}
+                        <ReadReceipt isOut={isOut} />
                       </div>
                     </div>
                     {/* Sender label below bubble */}
