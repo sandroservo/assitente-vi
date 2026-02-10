@@ -16,7 +16,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const { name, email, phone, city, notes, summary } = body;
+    const { name, email, phone, city, notes, summary, category } = body;
 
     const updateData: Record<string, string> = {};
     if (name) updateData.name = name;
@@ -25,6 +25,7 @@ export async function PATCH(
     if (city) updateData.city = city;
     if (notes) updateData.notes = notes;
     if (summary) updateData.summary = summary;
+    if (category) updateData.category = category;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(

@@ -703,6 +703,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                   <option value="geral">Geral</option>
                   <option value="rotina">Cliente Rotina</option>
                   <option value="especializado">Cliente Especializado</option>
+                  <option value="cobertura_total">Cliente Cobertura Total</option>
                 </select>
               </div>
               <div className="flex gap-3 pt-2">
