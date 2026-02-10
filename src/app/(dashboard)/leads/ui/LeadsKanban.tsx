@@ -158,6 +158,8 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   useEffect(() => { leadsLengthRef.current = leads.length; }, [leads.length]);
   useEffect(() => setMounted(true), []);
 
+  const leadsSnapshotRef = useRef("");
+
   const fetchLeads = useCallback(async (replace = true, search = searchQuery, category = activeCategory) => {
     try {
       const currentLength = leadsLengthRef.current;
@@ -174,7 +176,13 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
       if (res.ok) {
         const data = await res.json();
         if (replace) {
-          setLeads(data.leads);
+          const snapshot = (data.leads as Lead[])
+            .map((l) => `${l.id}:${l.status}:${l.updatedAt}:${l.category}`)
+            .join("|");
+          if (snapshot !== leadsSnapshotRef.current) {
+            leadsSnapshotRef.current = snapshot;
+            setLeads(data.leads);
+          }
         } else {
           setLeads((prev) => {
             const existingIds = new Set(prev.map((l) => l.id));
