@@ -97,6 +97,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
 
       setText("");
       triggerRefetch();
+      requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (error) {
       console.error("Erro ao enviar:", error);
       onToast?.("Erro ao enviar mensagem", "error");
@@ -196,6 +197,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
       }
 
       triggerRefetch();
+      requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (error) {
       console.error("Erro ao enviar áudio:", error);
       onToast?.("Erro ao enviar áudio", "error");
@@ -313,6 +315,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
       clearAttachment();
       setText("");
       triggerRefetch();
+      requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
       onToast?.("Erro ao enviar arquivo", "error");
