@@ -64,6 +64,8 @@ interface ChatPageClientProps {
     id: string;
     body: string | null;
     type?: string;
+    mediaUrl?: string | null;
+    transcription?: string | null;
     direction: string;
     createdAt: Date;
     sentByUserName?: string | null;

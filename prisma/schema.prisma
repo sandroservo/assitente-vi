@@ -226,6 +226,8 @@ model Message {
   direction      MessageDirection
   type           String           @default("text")
   body           String?
+  mediaUrl       String?          // Caminho do arquivo de mídia (imagem/áudio/vídeo/documento)
+  transcription  String?          // Transcrição de áudio ou descrição de imagem pela IA
   providerId     String?
   sentByUserId   String?          // ID do atendente que enviou (null = bot ou lead)
   sentAt         DateTime?

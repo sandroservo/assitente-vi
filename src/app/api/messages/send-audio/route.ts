@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { evolutionSendAudio, evolutionSendPresence } from "@/lib/evolution";
 import { auth } from "@/lib/auth";
+import { saveMedia } from "@/lib/media-storage";
 
 export async function POST(req: Request) {
   try {
@@ -55,12 +56,16 @@ export async function POST(req: Request) {
     const session = await auth();
     const sentByUserId = session?.user?.id || null;
 
+    let mediaUrl: string | null = null;
+    try { mediaUrl = await saveMedia(base64, mimeType || "audio/ogg"); } catch (e) { console.error("Erro ao salvar áudio:", e); }
+
     const msg = await prisma.message.create({
       data: {
         conversationId,
         direction: "out",
         type: "audio",
         body: "[Áudio enviado]",
+        mediaUrl,
         sentByUserId,
         sentAt: new Date(),
       },

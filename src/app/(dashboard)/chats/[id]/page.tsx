@@ -63,6 +63,8 @@ export default async function ChatDetailPage({
     id: m.id,
     body: m.body ?? "",
     type: m.type ?? "text",
+    mediaUrl: m.mediaUrl ?? null,
+    transcription: m.transcription ?? null,
     direction: m.direction,
     createdAt: m.createdAt,
     sentByUserName: m.sentByUser?.name ?? null,

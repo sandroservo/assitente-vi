@@ -11,6 +11,7 @@ import { evolutionSendText, evolutionSendTextHumanized, evolutionSendMedia, evol
 import { readFile } from "fs/promises";
 import path from "path";
 import { transcribeAudio, describeImage } from "@/lib/media";
+import { saveMedia } from "@/lib/media-storage";
 import { generateAIResponse, shouldTransferToHuman, detectLeadStatus, generateConversationSummary } from "@/lib/ai";
 import { updateLeadScore, getStatusFromScore } from "@/lib/lead-score";
 
@@ -42,20 +43,35 @@ export async function POST(req: Request) {
     const messageType: "text" | "audio" | "image" = text != null ? "text" : msg?.audioMessage ? "audio" : msg?.imageMessage ? "image" : "text";
 
     // Só transcreve/descreve mídia em mensagens recebidas (não as enviadas por nós)
+    let savedMediaUrl: string | null = null;
+    let transcriptionText: string | null = null;
+
     if (!fromMe) {
       if (messageType === "audio" && instanceName && providerId) {
         const media = await evolutionGetMediaBase64(instanceName, providerId);
         if (media) {
+          if (media.base64 && media.mimeType) {
+            try { savedMediaUrl = await saveMedia(media.base64, media.mimeType); } catch (e) { console.error("Erro ao salvar áudio:", e); }
+          }
           const transcribed = await transcribeAudio(media.base64, media.mimeType);
-          if (transcribed) text = transcribed;
+          if (transcribed) {
+            transcriptionText = transcribed;
+            text = transcribed;
+          }
         }
         if (!text) text = "[Áudio não transcrito]";
       } else if (messageType === "image" && instanceName && providerId) {
         const media = await evolutionGetMediaBase64(instanceName, providerId);
         const caption = msg?.imageMessage?.caption ?? "";
         if (media) {
+          if (media.base64 && media.mimeType) {
+            try { savedMediaUrl = await saveMedia(media.base64, media.mimeType); } catch (e) { console.error("Erro ao salvar imagem:", e); }
+          }
           const described = await describeImage(media.base64, media.mimeType, caption || undefined);
-          if (described) text = caption ? `${described}\n\nLegenda do usuário: ${caption}` : described;
+          if (described) {
+            transcriptionText = described;
+            text = caption ? `${described}\n\nLegenda do usuário: ${caption}` : described;
+          }
         }
         if (!text) text = caption || "[Imagem sem descrição]";
       }
@@ -158,6 +174,8 @@ export async function POST(req: Request) {
         direction: fromMe ? "out" : "in",
         type: messageType,
         body: text ?? null,
+        mediaUrl: savedMediaUrl,
+        transcription: transcriptionText,
         providerId: providerId ?? null,
         sentAt: new Date(),
       },

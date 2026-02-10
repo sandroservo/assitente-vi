@@ -17,6 +17,8 @@ interface Message {
   id: string;
   body: string | null;
   type: string;
+  mediaUrl?: string | null;
+  transcription?: string | null;
   direction: "in" | "out";
   createdAt: Date | string;
   sentByUserName?: string | null;
@@ -28,6 +30,8 @@ interface InboxConversationProps {
     id: string;
     body: string | null;
     type?: string;
+    mediaUrl?: string | null;
+    transcription?: string | null;
     direction: string;
     createdAt: Date;
     sentByUserName?: string | null;
@@ -88,6 +92,8 @@ export default function InboxConversation({
       id: m.id,
       body: m.body ?? "",
       type: m.type ?? "text",
+      mediaUrl: m.mediaUrl ?? null,
+      transcription: m.transcription ?? null,
       direction: m.direction as "in" | "out",
       createdAt: m.createdAt,
       sentByUserName: m.sentByUserName ?? null,
@@ -229,8 +235,48 @@ export default function InboxConversation({
                           : "bg-white text-gray-800 rounded-2xl rounded-tl-md"
                       )}
                     >
-                      {/* Media type indicator */}
-                      {isMediaType && (
+                      {/* Imagem inline */}
+                      {m.type === "image" && m.mediaUrl && (
+                        <div className="mb-2 -mx-2 -mt-1">
+                          <img
+                            src={m.mediaUrl}
+                            alt="Imagem"
+                            className="rounded-xl max-w-full max-h-72 object-cover cursor-pointer"
+                            loading="lazy"
+                            onClick={() => window.open(m.mediaUrl!, "_blank")}
+                          />
+                        </div>
+                      )}
+
+                      {/* Player de áudio */}
+                      {m.type === "audio" && m.mediaUrl && (
+                        <div className="mb-2 min-w-[220px]">
+                          <audio
+                            controls
+                            preload="metadata"
+                            className="w-full h-9 rounded-lg"
+                            style={{ filter: isOut ? "invert(1) brightness(2)" : "none" }}
+                          >
+                            <source src={m.mediaUrl} />
+                          </audio>
+                        </div>
+                      )}
+
+                      {/* Transcrição abaixo de áudio/imagem */}
+                      {isMediaType && m.transcription && (
+                        <div className={cn(
+                          "text-[11px] leading-snug italic mb-1 px-1 py-1 rounded-lg",
+                          isOut ? "text-white/70 bg-white/10" : "text-gray-500 bg-gray-50"
+                        )}>
+                          <span className="font-semibold not-italic">
+                            {m.type === "audio" ? "Transcrição: " : "IA: "}
+                          </span>
+                          {m.transcription}
+                        </div>
+                      )}
+
+                      {/* Indicador de tipo para mídia sem URL (mensagens antigas) */}
+                      {isMediaType && !m.mediaUrl && (
                         <span className={cn(
                           "inline-flex items-center text-xs font-medium mb-0.5",
                           isOut ? "text-white/80" :
@@ -246,9 +292,20 @@ export default function InboxConversation({
                            "Documento"}
                         </span>
                       )}
-                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">
-                        {m.body ?? ""}
-                      </p>
+
+                      {/* Texto da mensagem (oculta body genérico para mídia com URL) */}
+                      {(!isMediaType || !m.mediaUrl) && m.body && (
+                        <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">
+                          {m.body}
+                        </p>
+                      )}
+
+                      {/* Caption de imagem enviada */}
+                      {m.type === "image" && m.mediaUrl && m.body && !m.body.startsWith("[") && (
+                        <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words mt-1">
+                          {m.body}
+                        </p>
+                      )}
                       <div className={cn(
                         "flex items-center gap-1 mt-1",
                         isOut ? "justify-end" : "justify-start"

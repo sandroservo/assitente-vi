@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { evolutionSendMedia } from "@/lib/evolution";
 import { auth } from "@/lib/auth";
+import { saveMedia } from "@/lib/media-storage";
 
 export async function POST(req: Request) {
   try {
@@ -73,12 +74,16 @@ export async function POST(req: Request) {
           ? `[Vídeo enviado${caption ? `: ${caption}` : ""}]`
           : `[Documento enviado: ${fileName || "arquivo"}]`;
 
+    let mediaUrlSaved: string | null = null;
+    try { mediaUrlSaved = await saveMedia(base64, mimeType || "application/octet-stream"); } catch (e) { console.error("Erro ao salvar mídia:", e); }
+
     const msg = await prisma.message.create({
       data: {
         conversationId,
         direction: "out",
         type: mediatype,
         body: bodyText,
+        mediaUrl: mediaUrlSaved,
         sentByUserId,
         sentAt: new Date(),
       },
