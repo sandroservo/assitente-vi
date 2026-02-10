@@ -133,7 +133,7 @@ const CATEGORIES = [
   { id: "cobertura_total", label: "Cliente Cobertura Total" },
 ];
 
-const POLLING_INTERVAL = 30000; // 30 segundos
+const POLLING_INTERVAL = 60000; // 60 segundos
 
 const PAGE_SIZE = 20;
 
@@ -159,8 +159,6 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   useEffect(() => { leadsLengthRef.current = leads.length; }, [leads.length]);
   useEffect(() => setMounted(true), []);
 
-  const leadsSnapshotRef = useRef("");
-
   const fetchLeads = useCallback(async (replace = true, search = searchQuery, category = activeCategory) => {
     try {
       const currentLength = leadsLengthRef.current;
@@ -177,13 +175,31 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
       if (res.ok) {
         const data = await res.json();
         if (replace) {
-          const snapshot = (data.leads as Lead[])
-            .map((l) => `${l.id}:${l.status}:${l.updatedAt}:${l.category}`)
-            .join("|");
-          if (snapshot !== leadsSnapshotRef.current) {
-            leadsSnapshotRef.current = snapshot;
-            setLeads(data.leads);
-          }
+          setLeads((prev) => {
+            const incoming = data.leads as Lead[];
+            const prevMap = new Map(prev.map((l) => [l.id, l]));
+            const incomingIds = new Set(incoming.map((l) => l.id));
+
+            let changed = false;
+
+            const merged = incoming.map((nl) => {
+              const old = prevMap.get(nl.id);
+              if (old && old.status === nl.status && old.updatedAt === nl.updatedAt && old.category === nl.category && old.name === nl.name) {
+                return old;
+              }
+              changed = true;
+              return nl;
+            });
+
+            const removed = prev.some((l) => !incomingIds.has(l.id));
+            const added = incoming.some((l) => !prevMap.has(l.id));
+
+            if (!changed && !removed && !added && prev.length === merged.length) {
+              return prev;
+            }
+
+            return merged;
+          });
         } else {
           setLeads((prev) => {
             const existingIds = new Set(prev.map((l) => l.id));
@@ -229,11 +245,6 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   // Mantém refs atualizadas para evitar recriação de intervals/observers
   useEffect(() => { fetchLeadsRef.current = fetchLeads; }, [fetchLeads]);
   useEffect(() => { loadMoreRef.current = loadMore; }, [loadMore]);
-
-  // Reseta snapshot ao mudar filtros para forçar atualização
-  useEffect(() => {
-    leadsSnapshotRef.current = "";
-  }, [searchQuery, activeCategory]);
 
   // Debounced search — pula o primeiro render (já temos initialLeads)
   useEffect(() => {
