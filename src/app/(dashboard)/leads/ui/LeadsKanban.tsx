@@ -152,6 +152,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   const [mounted, setMounted] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const leadsLengthRef = useRef(initialLeads.length);
+  const initialCountRef = useRef(initialLeads.length);
   const isFirstRender = useRef(true);
   const fetchLeadsRef = useRef<((replace?: boolean) => Promise<void>) | null>(null);
   const loadMoreRef = useRef<(() => Promise<void>) | null>(null);
@@ -164,7 +165,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
     try {
       const currentLength = leadsLengthRef.current;
       const skip = replace ? 0 : currentLength;
-      const take = replace ? Math.max(currentLength, PAGE_SIZE) : PAGE_SIZE;
+      const take = replace ? Math.max(currentLength, initialCountRef.current, PAGE_SIZE) : PAGE_SIZE;
       const params = new URLSearchParams({
         skip: String(skip),
         take: String(take),
@@ -228,6 +229,11 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   // Mantém refs atualizadas para evitar recriação de intervals/observers
   useEffect(() => { fetchLeadsRef.current = fetchLeads; }, [fetchLeads]);
   useEffect(() => { loadMoreRef.current = loadMore; }, [loadMore]);
+
+  // Reseta snapshot ao mudar filtros para forçar atualização
+  useEffect(() => {
+    leadsSnapshotRef.current = "";
+  }, [searchQuery, activeCategory]);
 
   // Debounced search — pula o primeiro render (já temos initialLeads)
   useEffect(() => {

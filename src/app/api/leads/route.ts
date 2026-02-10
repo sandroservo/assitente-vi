@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const skip = Math.max(0, Number(searchParams.get("skip")) || 0);
-    const take = Math.min(50, Math.max(1, Number(searchParams.get("take")) || DEFAULT_TAKE));
+    const take = Math.min(200, Math.max(1, Number(searchParams.get("take")) || DEFAULT_TAKE));
     const search = searchParams.get("search")?.trim() || "";
     const category = searchParams.get("category")?.trim() || "";
 
