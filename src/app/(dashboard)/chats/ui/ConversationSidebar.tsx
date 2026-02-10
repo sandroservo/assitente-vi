@@ -160,7 +160,7 @@ export default function ConversationSidebar({
             placeholder="Buscar conversa..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400 transition-colors"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-colors"
             aria-label="Buscar conversa por nome ou telefone"
           />
         </div>
@@ -187,7 +187,7 @@ export default function ConversationSidebar({
               onClick={() => router.push(`/chats/${conv.id}`)}
               className={cn(
                 "w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-gray-50 hover:bg-gray-50",
-                isActive && "bg-pink-50/80 hover:bg-pink-50/80 border-l-2 border-l-pink-500"
+                isActive && "bg-purple-50/80 hover:bg-purple-50/80 border-l-2 border-l-purple-500"
               )}
               aria-label={`Conversa com ${displayName}`}
               aria-current={isActive ? "page" : undefined}
@@ -201,7 +201,7 @@ export default function ConversationSidebar({
                     className="w-11 h-11 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white text-sm font-semibold">
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
                     {getInitials(conv.name || conv.pushName, conv.phone)}
                   </div>
                 )}
@@ -232,7 +232,7 @@ export default function ConversationSidebar({
                   </span>
                   <span className={cn(
                     "text-[11px] flex-shrink-0 ml-2",
-                    conv.unreadCount > 0 ? "text-pink-600 font-semibold" : "text-gray-400"
+                    conv.unreadCount > 0 ? "text-purple-600 font-semibold" : "text-gray-400"
                   )}>
                     {formatTime(conv.lastMessageAt)}
                   </span>
@@ -262,7 +262,7 @@ export default function ConversationSidebar({
 
                     {/* Unread badge */}
                     {conv.unreadCount > 0 && (
-                      <span className="bg-pink-500 text-white text-[10px] font-bold min-w-[20px] h-5 rounded-full flex items-center justify-center px-1.5">
+                      <span className="bg-purple-500 text-white text-[10px] font-bold min-w-[20px] h-5 rounded-full flex items-center justify-center px-1.5">
                         {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
                       </span>
                     )}

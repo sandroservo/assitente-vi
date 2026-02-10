@@ -15,7 +15,7 @@ function getStatusBadge(status: string, ownerType: string) {
     return { label: "Humano", className: "bg-indigo-100 text-indigo-700" };
   }
   const statusMap: Record<string, { label: string; className: string }> = {
-    NOVO: { label: "Novo", className: "bg-pink-100 text-pink-700" },
+    NOVO: { label: "Novo", className: "bg-purple-100 text-purple-700" },
     EM_ATENDIMENTO: { label: "Lead", className: "bg-violet-100 text-violet-700" },
     QUALIFICADO: { label: "Qualificado", className: "bg-green-100 text-green-700" },
     PROPOSTA_ENVIADA: { label: "Proposta", className: "bg-purple-100 text-purple-700" },
@@ -74,8 +74,8 @@ export default async function DashboardPage() {
       title: "Taxa de Conversão",
       value: leadsCount > 0 ? `${Math.round((conversationsCount / leadsCount) * 100)}%` : "0%",
       icon: TrendingUp,
-      gradient: "from-pink-500 to-purple-500",
-      shadow: "shadow-pink-500/25",
+      gradient: "from-purple-500 to-purple-600",
+      shadow: "shadow-purple-500/25",
     },
   ];
 
@@ -109,7 +109,7 @@ export default async function DashboardPage() {
             <h2 className="text-lg font-semibold text-gray-800">Clientes ativos</h2>
             <Link
               href="/chats"
-              className="px-4 py-2 bg-[#FE3E6E] text-white text-sm font-medium rounded-lg hover:bg-[#C24695] transition-colors"
+              className="px-4 py-2 bg-purple-500 text-white text-sm font-medium rounded-lg hover:bg-purple-600 transition-colors"
             >
               Ver conversas
             </Link>
@@ -165,7 +165,7 @@ export default async function DashboardPage() {
                       <p className="text-xs text-gray-500">{subtitle}</p>
                     </div>
                     {conv.unreadCount > 0 && (
-                      <span className="shrink-0 w-5 h-5 rounded-full bg-[#FE3E6E] text-white text-xs flex items-center justify-center font-medium">
+                      <span className="shrink-0 w-5 h-5 rounded-full bg-purple-500 text-white text-xs flex items-center justify-center font-medium">
                         {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
                       </span>
                     )}

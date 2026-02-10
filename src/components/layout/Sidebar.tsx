@@ -100,7 +100,7 @@ export function Sidebar() {
                     "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                     collapsed && "justify-center px-2",
                     isActive
-                      ? "bg-[#FE3E6E] text-white"
+                      ? "bg-purple-500 text-white"
                       : "text-gray-600 hover:bg-gray-50"
                   )}
                   title={collapsed ? item.label : undefined}
@@ -116,7 +116,7 @@ export function Sidebar() {
 
       <div className={cn("rounded-xl bg-gray-50 shrink-0", collapsed ? "p-2 m-2 flex justify-center" : "p-4 m-3 mb-2")}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#FE3E6E] flex items-center justify-center text-white font-semibold text-sm shrink-0">
+          <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
             Vi
           </div>
           {!collapsed && (

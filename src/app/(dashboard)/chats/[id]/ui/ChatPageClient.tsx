@@ -336,7 +336,7 @@ export default function ChatPageClient({
                 className="w-10 h-10 rounded-full object-cover"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-medium">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-medium">
                 {getInitials(lead.name || lead.pushName, lead.phone)}
               </div>
             )}
@@ -421,13 +421,13 @@ export default function ChatPageClient({
                 className={cn(
                   "flex-1 py-3 text-sm font-medium transition-colors relative",
                   activeTab === tab.key
-                    ? "text-pink-600"
+                    ? "text-purple-600"
                     : "text-gray-400 hover:text-gray-600"
                 )}
               >
                 {tab.label}
                 {activeTab === tab.key && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500" />
                 )}
               </button>
             ))}
@@ -451,7 +451,7 @@ export default function ChatPageClient({
             {/* Dados do Lead — editáveis */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-pink-500" />
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
                 <h3 className="font-semibold text-sm">Dados do Lead</h3>
               </div>
               <div className="space-y-3">
@@ -466,7 +466,7 @@ export default function ChatPageClient({
                           type="text"
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="flex-1 px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                          className="flex-1 px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
                           autoFocus
                           onKeyDown={(e) => e.key === "Enter" && saveField("name")}
                           aria-label="Editar nome"
@@ -484,7 +484,7 @@ export default function ChatPageClient({
                   </div>
                   {editingField !== "name" && (
                     <button onClick={() => startEditing("name", lead.name)} className="opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Editar nome">
-                      <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-pink-500" />
+                      <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-purple-500" />
                     </button>
                   )}
                 </div>
@@ -510,7 +510,7 @@ export default function ChatPageClient({
                           type="email"
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="flex-1 px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                          className="flex-1 px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
                           autoFocus
                           onKeyDown={(e) => e.key === "Enter" && saveField("email")}
                           aria-label="Editar email"
@@ -530,7 +530,7 @@ export default function ChatPageClient({
                   </div>
                   {editingField !== "email" && (
                     <button onClick={() => startEditing("email", lead.email)} className="opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Editar email">
-                      <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-pink-500" />
+                      <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-purple-500" />
                     </button>
                   )}
                 </div>
@@ -546,7 +546,7 @@ export default function ChatPageClient({
                           type="text"
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="flex-1 px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                          className="flex-1 px-2 py-1 text-sm border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
                           autoFocus
                           onKeyDown={(e) => e.key === "Enter" && saveField("city")}
                           aria-label="Editar cidade"
@@ -566,7 +566,7 @@ export default function ChatPageClient({
                   </div>
                   {editingField !== "city" && (
                     <button onClick={() => startEditing("city", lead.city)} className="opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Editar cidade">
-                      <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-pink-500" />
+                      <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-purple-500" />
                     </button>
                   )}
                 </div>
@@ -582,7 +582,7 @@ export default function ChatPageClient({
                   <select
                     value={lead.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-pink-500 focus:outline-none cursor-pointer"
+                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer"
                     aria-label="Alterar status do lead"
                   >
                     <option value="NOVO">Novo</option>
@@ -620,11 +620,11 @@ export default function ChatPageClient({
                   <div className="flex items-center gap-3">
                     <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full transition-all"
+                        className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all"
                         style={{ width: `${Math.min((lead.leadScore / 1000) * 100, 100)}%` }}
                       />
                     </div>
-                    <span className="text-sm font-bold text-pink-600">{lead.leadScore}</span>
+                    <span className="text-sm font-bold text-purple-600">{lead.leadScore}</span>
                   </div>
                 </div>
               </div>
@@ -651,7 +651,7 @@ export default function ChatPageClient({
             {/* Lembretes */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
-                <Bell className="h-4 w-4 text-pink-500" />
+                <Bell className="h-4 w-4 text-purple-500" />
                 <h3 className="font-semibold text-sm">Lembretes</h3>
                 {loadingReminders && (
                   <RefreshCw className="h-3 w-3 text-gray-400 animate-spin ml-auto" />
@@ -678,7 +678,7 @@ export default function ChatPageClient({
                               type="datetime-local"
                               value={editReminderDate}
                               onChange={(e) => setEditReminderDate(e.target.value)}
-                              className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                              className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
                             />
                           </div>
                           <div>
@@ -689,14 +689,14 @@ export default function ChatPageClient({
                               value={editReminderNote}
                               onChange={(e) => setEditReminderNote(e.target.value)}
                               placeholder="Nota do lembrete..."
-                              className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                              className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
                             />
                           </div>
                           <div className="flex gap-2 pt-1">
                             <button
                               onClick={() => handleSaveReminder(rem.id)}
                               disabled={savingReminder || !editReminderDate}
-                              className="flex-1 px-3 py-1.5 text-xs font-medium bg-pink-500 text-white rounded-lg hover:bg-pink-600 disabled:opacity-50 transition-colors"
+                              className="flex-1 px-3 py-1.5 text-xs font-medium bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 transition-colors"
                             >
                               {savingReminder ? "Salvando..." : "Salvar"}
                             </button>
@@ -740,7 +740,7 @@ export default function ChatPageClient({
                             title="Editar lembrete"
                             aria-label="Editar lembrete"
                           >
-                            <Pencil className="h-3.5 w-3.5 text-gray-500 hover:text-pink-500" />
+                            <Pencil className="h-3.5 w-3.5 text-gray-500 hover:text-purple-500" />
                           </button>
                           <button
                             onClick={() => handleDeleteReminder(rem.id)}
@@ -766,7 +766,7 @@ export default function ChatPageClient({
             {/* Resumo automático da conversa */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 rounded-full bg-pink-500" />
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
                 <h3 className="font-semibold text-sm">Resumo da Conversa</h3>
                 <span className="text-[10px] text-gray-400 ml-auto">Gerado automaticamente</span>
               </div>
@@ -786,7 +786,7 @@ export default function ChatPageClient({
               <h3 className="font-semibold text-sm mb-3">Notas do Atendente</h3>
               <textarea
                 placeholder="Adicione notas sobre este lead..."
-                className="w-full h-32 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm"
+                className="w-full h-32 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                 defaultValue=""
                 aria-label="Notas manuais do lead"
               />

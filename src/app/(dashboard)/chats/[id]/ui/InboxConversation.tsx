@@ -227,7 +227,7 @@ export default function InboxConversation({
                       "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ring-2 ring-white shadow-sm",
                       isHuman
                         ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white"
-                        : "bg-gradient-to-br from-pink-500 to-pink-600 text-white"
+                        : "bg-gradient-to-br from-purple-500 to-purple-600 text-white"
                     )}>
                       {isHuman
                         ? m.sentByUserName!.split(" ")[0][0].toUpperCase()
@@ -247,7 +247,7 @@ export default function InboxConversation({
                         isOut
                           ? isHuman
                             ? "bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl rounded-tr-md"
-                            : "bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-2xl rounded-tr-md"
+                            : "bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl rounded-tr-md"
                           : "bg-white text-gray-800 rounded-2xl rounded-tl-md"
                       )}
                     >

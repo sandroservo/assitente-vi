@@ -140,7 +140,7 @@ export default function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
           placeholder="Buscar categoria..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400"
+          className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400"
           aria-label="Buscar emojis"
           autoFocus
         />
@@ -156,7 +156,7 @@ export default function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
               className={cn(
                 "flex-1 py-1 text-center text-base rounded-md transition-colors",
                 activeCategory === idx
-                  ? "bg-pink-100"
+                  ? "bg-purple-100"
                   : "hover:bg-gray-100"
               )}
               title={cat.label}

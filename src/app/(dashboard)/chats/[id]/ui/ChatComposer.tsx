@@ -362,7 +362,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
             onClick={stopRecording}
             disabled={loading}
             size="icon"
-            className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+            className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 to-purple-700 shadow-md"
             aria-label="Enviar áudio"
           >
             {loading ? (
@@ -432,7 +432,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
                   key={card.file}
                   onClick={() => sendCard(card)}
                   disabled={sendingCard}
-                  className="group relative rounded-lg overflow-hidden border hover:border-pink-400 transition-all hover:shadow-md disabled:opacity-50"
+                  className="group relative rounded-lg overflow-hidden border hover:border-purple-400 transition-all hover:shadow-md disabled:opacity-50"
                 >
                   <img
                     src={`/cards/${card.file}`}
@@ -470,7 +470,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
                 size="icon"
                 className={cn(
                   "h-9 w-9 rounded-full",
-                  showEmojiPicker ? "bg-pink-50 text-pink-500" : "hover:bg-gray-100 text-gray-500"
+                  showEmojiPicker ? "bg-purple-50 text-purple-500" : "hover:bg-gray-100 text-gray-500"
                 )}
                 onClick={() => setShowEmojiPicker((prev) => !prev)}
                 title="Emojis"
@@ -534,7 +534,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
             <Button
               disabled
               size="icon"
-              className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 shadow-md"
+              className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 shadow-md"
             >
               <Loader2 className="h-5 w-5 animate-spin" />
             </Button>
@@ -543,7 +543,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
               onClick={attachedFile ? sendFile : sendText}
               disabled={loading || (!text.trim() && !attachedFile)}
               size="icon"
-              className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+              className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 to-purple-700 shadow-md"
               aria-label="Enviar mensagem"
             >
               {loading ? (
@@ -557,7 +557,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
               onClick={startRecording}
               disabled={loading}
               size="icon"
-              className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 shadow-md"
+              className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 to-purple-700 shadow-md"
               title="Gravar áudio"
               aria-label="Gravar áudio"
             >

@@ -62,10 +62,10 @@ const COLUMNS = [
   {
     id: "NOVO",
     title: "Novo",
-    bgColor: "bg-pink-50",
-    headerBg: "bg-pink-100",
-    borderColor: "border-pink-200",
-    badgeColor: "bg-pink-500"
+    bgColor: "bg-purple-50",
+    headerBg: "bg-purple-100",
+    borderColor: "border-purple-200",
+    badgeColor: "bg-purple-500"
   },
   {
     id: "EM_ATENDIMENTO",
@@ -446,8 +446,8 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
               className={cn(
                 "px-4 py-2 rounded-full text-sm font-medium transition-all",
                 activeCategory === cat.id
-                  ? "bg-[#FE3E6E] text-white shadow-md"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-pink-300 hover:text-pink-600"
+                  ? "bg-purple-500 text-white shadow-md"
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-purple-300 hover:text-purple-600"
               )}
             >
               {cat.label}
@@ -462,7 +462,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
             placeholder="Buscar por nome ou telefone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none transition-all text-sm"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none transition-all text-sm"
           />
           {searchQuery && (
             <button
@@ -543,7 +543,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                                       className={cn(
                                         "bg-white rounded-lg p-3 shadow-sm border border-gray-100 transition-shadow cursor-grab active:cursor-grabbing group relative",
                                         snapshot.isDragging
-                                          ? "shadow-lg ring-2 ring-pink-300"
+                                          ? "shadow-lg ring-2 ring-purple-300"
                                           : "hover:shadow-md"
                                       )}
                                     >
@@ -662,7 +662,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                             className="flex justify-center items-center py-4 min-h-[48px]"
                           >
                             {loadingMore && (
-                              <Loader2 className="w-5 h-5 animate-spin text-pink-500" />
+                              <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
                             )}
                             {!hasMore && leads.length > 0 && !loadingMore && (
                               <p className="text-xs text-gray-400">Todos carregados</p>
@@ -701,7 +701,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                   type="text"
                   name="name"
                   defaultValue={editingLead.name || editingLead.pushName || ""}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none"
                   placeholder="Nome do contato"
                 />
               </div>
@@ -723,7 +723,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                 <select
                   name="category"
                   defaultValue={editingLead.category || "geral"}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none"
                 >
                   <option value="geral">Geral</option>
                   <option value="rotina">Cliente Rotina</option>
@@ -742,7 +742,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#FE3E6E] hover:bg-[#C24695] text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isSaving ? "Salvando..." : "Salvar"}

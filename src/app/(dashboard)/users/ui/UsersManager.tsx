@@ -226,7 +226,7 @@ export function UsersManager({ users: initialUsers, currentUserId, currentUserRo
 
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-[#FE3E6E] to-[#C24695] hover:from-[#C24695] hover:to-[#7151C9]">
+            <Button className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700">
               <UserPlus className="w-4 h-4 mr-2" />
               Novo Usuário
             </Button>
@@ -328,7 +328,7 @@ export function UsersManager({ users: initialUsers, currentUserId, currentUserRo
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-[#FE3E6E] hover:bg-[#C24695]"
+                  className="bg-purple-500 hover:bg-purple-600"
                 >
                   {loading ? (
                     <>

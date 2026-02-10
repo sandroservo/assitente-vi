@@ -67,7 +67,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  NOVO: "bg-pink-100 text-pink-700",
+  NOVO: "bg-purple-100 text-purple-700",
   EM_ATENDIMENTO: "bg-orange-100 text-orange-700",
   QUALIFICADO: "bg-blue-100 text-blue-700",
   LEAD_FRIO: "bg-slate-100 text-slate-700",
@@ -88,7 +88,7 @@ export function ReportsView({ userStats, stats }: ReportsViewProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-5">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FE3E6E] to-[#C24695] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
               <Users className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -140,7 +140,7 @@ export function ReportsView({ userStats, stats }: ReportsViewProps) {
       {/* Leads por status */}
       <Card className="p-5">
         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-[#FE3E6E]" />
+          <TrendingUp className="w-5 h-5 text-purple-500" />
           Leads por Status
         </h2>
         <div className="flex flex-wrap gap-3">
@@ -161,7 +161,7 @@ export function ReportsView({ userStats, stats }: ReportsViewProps) {
       {/* Desempenho por usuário */}
       <Card className="p-5">
         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <UserCheck className="w-5 h-5 text-[#FE3E6E]" />
+          <UserCheck className="w-5 h-5 text-purple-500" />
           Desempenho por Usuário
         </h2>
         
