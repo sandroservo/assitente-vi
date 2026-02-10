@@ -303,7 +303,7 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
                     href="https://platform.openai.com/api-keys"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-purple-500 hover:underline"
+                    className="text-pink-500 hover:underline"
                   >
                     platform.openai.com
                   </a>
@@ -426,7 +426,7 @@ export function SettingsForm({ settings, defaultSystemPrompt }: SettingsFormProp
         <Button
           type="submit"
           disabled={loading}
-          className="bg-purple-500 hover:bg-purple-600"
+          className="bg-pink-500 hover:bg-pink-600"
         >
           {loading ? (
             <>

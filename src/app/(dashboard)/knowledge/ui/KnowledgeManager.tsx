@@ -209,7 +209,7 @@ export function KnowledgeManager({ initialItems, categories }: Props) {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button className="bg-purple-500 hover:bg-purple-600">
+            <Button className="bg-pink-500 hover:bg-pink-600">
               <Plus className="h-4 w-4 mr-2" />
               Novo Item
             </Button>
@@ -310,7 +310,7 @@ export function KnowledgeManager({ initialItems, categories }: Props) {
                 <Button
                   type="submit"
                   disabled={loading || !formData.category || !formData.title}
-                  className="flex-1 bg-purple-500 hover:bg-purple-600"
+                  className="flex-1 bg-pink-500 hover:bg-pink-600"
                 >
                   {loading ? (
                     <>

@@ -124,7 +124,7 @@ export default function LeadSidebar({
             className="w-20 h-20 rounded-full object-cover mb-3"
           />
         ) : (
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-2xl font-bold mb-3">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white text-2xl font-bold mb-3">
             {getInitials(lead.name || lead.pushName, lead.phone)}
           </div>
         )}

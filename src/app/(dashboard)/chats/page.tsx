@@ -11,8 +11,8 @@ export default function ChatsPage() {
   return (
     <div className="flex flex-col items-center justify-center h-full bg-gray-50/50">
       <div className="text-center">
-        <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-4">
-          <MessageSquare className="h-10 w-10 text-purple-400" />
+        <div className="w-20 h-20 rounded-full bg-pink-100 flex items-center justify-center mx-auto mb-4">
+          <MessageSquare className="h-10 w-10 text-pink-400" />
         </div>
         <h2 className="text-xl font-semibold text-gray-700 mb-2">
           Selecione uma conversa
