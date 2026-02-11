@@ -336,7 +336,7 @@ export default function ChatPageClient({
             {/* Botão voltar — mobile only */}
             <button
               onClick={() => router.push("/chats")}
-              className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 shrink-0"
+              className="md:hidden p-2 rounded-full bg-pink-50 hover:bg-pink-100 text-[#FE3E6E] shrink-0 transition-colors"
               aria-label="Voltar para conversas"
             >
               <ArrowLeft className="h-5 w-5" />
