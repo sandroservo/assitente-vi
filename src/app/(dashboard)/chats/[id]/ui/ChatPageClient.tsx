@@ -327,7 +327,7 @@ export default function ChatPageClient({
   const router = useRouter();
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full max-h-full overflow-hidden">
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0 bg-gray-50">
         {/* Header */}

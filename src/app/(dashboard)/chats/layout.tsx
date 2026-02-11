@@ -59,9 +59,9 @@ export default async function ChatsLayout({
   });
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       <ConversationSidebar initialConversations={conversations} />
-      <div className="flex-1 min-w-0">{children}</div>
+      <div className="flex-1 min-w-0 h-full">{children}</div>
     </div>
   );
 }
