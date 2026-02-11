@@ -22,11 +22,13 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeft,
+  Contact,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/chats", icon: MessageSquare, label: "Chats" },
+  { href: "/contacts", icon: Contact, label: "Contatos" },
   { href: "/kanban", icon: ClipboardList, label: "Kanban" },
   { href: "/knowledge", icon: BookOpen, label: "Conhecimento" },
   { href: "/users", icon: Users, label: "Usuários" },
