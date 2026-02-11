@@ -3,7 +3,7 @@
  * Site: https://cloudservo.com.br
  */
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -17,11 +17,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#FE3E6E",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "Vi - Consultora Amo Vidas",
   description: "Sistema de atendimento automatizado via WhatsApp",
   manifest: "/manifest.json",
-  themeColor: "#FE3E6E",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
