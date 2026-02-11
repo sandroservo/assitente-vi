@@ -469,7 +469,7 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
                 <div>
                   <h2 className="text-lg font-bold text-gray-800">Disparo em Massa</h2>
                   <p className="text-xs text-gray-500">
-                    {selectedIds.size} contatos selecionados | Intervalo aleatório 10-30s
+                    {selectedIds.size} contatos selecionados | Intervalos dinâmicos
                   </p>
                 </div>
               </div>
@@ -542,7 +542,7 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
 
                   {/* Aviso */}
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
-                    <strong>Atenção:</strong> As mensagens serão enviadas em ordem aleatória com intervalo de 10 a 30 segundos entre cada envio para proteger seu número.
+                    <strong>Atenção:</strong> As mensagens serão enviadas em ordem aleatória com intervalos dinâmicos e imprevisíveis (8s a 90s) para proteger seu número contra bloqueio.
                     Não feche esta janela durante o disparo.
                   </div>
                 </>

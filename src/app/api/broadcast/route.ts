@@ -24,8 +24,36 @@ interface BroadcastPayload {
   imageMimeType?: string;
 }
 
-function randomDelay(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+/**
+ * Gera delays dinâmicos e imprevisíveis para simular comportamento humano.
+ * Usa distribuição ponderada com 3 faixas + pausas longas esporádicas.
+ */
+function dynamicDelay(index: number, total: number): number {
+  const roll = Math.random();
+
+  let base: number;
+  if (roll < 0.50) {
+    // 50% — pausa curta: 8-18s
+    base = 8000 + Math.random() * 10000;
+  } else if (roll < 0.85) {
+    // 35% — pausa média: 20-45s
+    base = 20000 + Math.random() * 25000;
+  } else {
+    // 15% — pausa longa: 50-90s
+    base = 50000 + Math.random() * 40000;
+  }
+
+  // Jitter ±20% para nunca repetir o mesmo intervalo
+  const jitter = base * (0.8 + Math.random() * 0.4);
+
+  // A cada ~5 envios, chance de 40% de pausa extra (30-60s)
+  // simula "distração" humana
+  const extraPause =
+    index > 0 && index % 5 === 0 && Math.random() < 0.4
+      ? 30000 + Math.random() * 30000
+      : 0;
+
+  return Math.round(jitter + extraPause);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -111,9 +139,9 @@ export async function POST(req: Request) {
             });
           }
 
-          // Delay aleatório entre 10-30 segundos (exceto no último)
+          // Delay dinâmico e imprevisível (exceto no último)
           if (i < shuffled.length - 1) {
-            const delay = randomDelay(10000, 30000);
+            const delay = dynamicDelay(i, shuffled.length);
             send({
               type: "waiting",
               delay,
