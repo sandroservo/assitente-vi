@@ -20,6 +20,25 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Vi - Consultora Amo Vidas",
   description: "Sistema de atendimento automatizado via WhatsApp",
+  manifest: "/manifest.json",
+  themeColor: "#FE3E6E",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Vi Amo Vidas",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RootLayout({
