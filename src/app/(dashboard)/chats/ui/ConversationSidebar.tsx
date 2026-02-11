@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, Bot, UserCheck, MessageSquare, Mic, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -89,6 +89,28 @@ function getMessagePreview(conv: Conversation): string {
   return `${prefix}${body.length > 50 ? body.slice(0, 50) + "…" : body}`;
 }
 
+/**
+ * Toca um som curto de notificação usando Web Audio API
+ */
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+    oscillator.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.3);
+  } catch {
+    // Web Audio não disponível
+  }
+}
+
 export default function ConversationSidebar({
   initialConversations,
 }: ConversationSidebarProps) {
@@ -96,11 +118,48 @@ export default function ConversationSidebar({
   const [search, setSearch] = useState("");
   const pathname = usePathname();
   const router = useRouter();
+  const prevUnreadMapRef = useRef<Map<string, number>>(new Map());
+  const isFirstFetchRef = useRef(true);
 
   // Extrai o ID da conversa ativa do pathname
   const activeId = pathname.startsWith("/chats/")
     ? pathname.split("/chats/")[1]?.split("/")[0] ?? null
     : null;
+
+  // Pede permissão de notificação ao montar
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+    // Inicializa mapa de unreads com dados iniciais
+    const map = new Map<string, number>();
+    initialConversations.forEach((c) => map.set(c.id, c.unreadCount));
+    prevUnreadMapRef.current = map;
+  }, []);
+
+  // Dispara notificação de browser + som
+  const fireNotification = useCallback((conv: Conversation) => {
+    playNotificationSound();
+    const displayName = conv.name || conv.pushName || conv.phone;
+    const body = getMessagePreview(conv);
+
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        const n = new Notification(`Nova mensagem de ${displayName}`, {
+          body,
+          icon: conv.avatarUrl || "/assets/logo_amovidas.webp",
+          tag: conv.id,
+        });
+        n.onclick = () => {
+          window.focus();
+          router.push(`/chats/${conv.id}`);
+          n.close();
+        };
+      } catch {
+        // fallback: nada (mobile pode não suportar new Notification)
+      }
+    }
+  }, [router]);
 
   // Polling para atualizar lista de conversas
   const fetchConversations = useCallback(async () => {
@@ -109,17 +168,47 @@ export default function ConversationSidebar({
       if (!res.ok) return;
       const data = await res.json();
       if (data.conversations) {
-        setConversations(data.conversations);
+        const incoming = data.conversations as Conversation[];
+
+        // Detecta novas mensagens não lidas (pula primeiro fetch)
+        if (!isFirstFetchRef.current) {
+          const prevMap = prevUnreadMapRef.current;
+          for (const conv of incoming) {
+            const prevUnread = prevMap.get(conv.id) ?? 0;
+            // Notifica se unread subiu E não é a conversa ativa
+            if (conv.unreadCount > prevUnread && conv.id !== activeId) {
+              fireNotification(conv);
+              break; // Notifica só 1 por ciclo para não spammar
+            }
+          }
+        }
+        isFirstFetchRef.current = false;
+
+        // Atualiza mapa de unreads
+        const newMap = new Map<string, number>();
+        incoming.forEach((c) => newMap.set(c.id, c.unreadCount));
+        prevUnreadMapRef.current = newMap;
+
+        setConversations(incoming);
       }
     } catch {
       // silently ignore
     }
-  }, []);
+  }, [activeId, fireNotification]);
 
   useEffect(() => {
     const interval = setInterval(fetchConversations, 5000);
     return () => clearInterval(interval);
   }, [fetchConversations]);
+
+  // Atualiza título da aba com contagem de não lidas
+  const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  useEffect(() => {
+    document.title = totalUnread > 0
+      ? `(${totalUnread}) Conversas — Vi Assistente`
+      : "Conversas — Vi Assistente";
+    return () => { document.title = "Vi Assistente"; };
+  }, [totalUnread]);
 
   // Filtra conversas pela busca
   const filtered = conversations.filter((c) => {
