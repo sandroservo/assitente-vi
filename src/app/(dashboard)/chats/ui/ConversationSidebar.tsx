@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Bot, UserCheck, MessageSquare, Mic, Image as ImageIcon } from "lucide-react";
+import { Search, Bot, UserCheck, MessageSquare, Mic, Image as ImageIcon, X, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Conversation {
@@ -120,6 +120,8 @@ export default function ConversationSidebar({
   const router = useRouter();
   const prevUnreadMapRef = useRef<Map<string, number>>(new Map());
   const isFirstFetchRef = useRef(true);
+  const [toastConv, setToastConv] = useState<Conversation | null>(null);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Extrai o ID da conversa ativa do pathname
   const activeId = pathname.startsWith("/chats/")
@@ -137,12 +139,18 @@ export default function ConversationSidebar({
     prevUnreadMapRef.current = map;
   }, []);
 
-  // Dispara notificação de browser + som
+  // Dispara notificação de browser + som + toast in-app
   const fireNotification = useCallback((conv: Conversation) => {
     playNotificationSound();
     const displayName = conv.name || conv.pushName || conv.phone;
     const body = getMessagePreview(conv);
 
+    // Toast in-app
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastConv(conv);
+    toastTimerRef.current = setTimeout(() => setToastConv(null), 5000);
+
+    // Browser notification
     if ("Notification" in window && Notification.permission === "granted") {
       try {
         const n = new Notification(`Nova mensagem de ${displayName}`, {
@@ -232,6 +240,7 @@ export default function ConversationSidebar({
   });
 
   return (
+    <>
     <div className={cn(
       "border-r bg-white flex flex-col h-full",
       "w-full md:w-[340px] md:min-w-[340px]",
@@ -367,5 +376,53 @@ export default function ConversationSidebar({
         })}
       </div>
     </div>
+
+    {/* Toast de nova mensagem */}
+    {(() => {
+      const tc = toastConv;
+      if (!tc) return null;
+      return (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-6 md:bottom-6 z-[70] animate-in slide-in-from-bottom-4 fade-in duration-300 w-[calc(100%-2rem)] max-w-sm">
+          <div
+            className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border border-pink-200 bg-white cursor-pointer hover:bg-pink-50 transition-colors"
+            onClick={() => {
+              router.push(`/chats/${tc.id}`);
+              setToastConv(null);
+            }}
+            role="alert"
+          >
+            {tc.avatarUrl ? (
+              <img src={tc.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                {getInitials(tc.name || tc.pushName, tc.phone)}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-800 truncate">
+                {tc.name || tc.pushName || tc.phone}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {getMessagePreview(tc)}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <MessageCircle className="h-4 w-4 text-pink-500" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setToastConv(null);
+                }}
+                className="p-1 rounded-full hover:bg-gray-100 text-gray-400"
+                aria-label="Fechar notificação"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+    </>
   );
 }
