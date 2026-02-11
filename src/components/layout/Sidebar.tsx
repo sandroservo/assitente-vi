@@ -166,15 +166,17 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Botão hamburger — mobile only */}
-      <button
-        type="button"
-        onClick={() => setMobileOpen(true)}
-        className="fixed top-3 left-3 z-50 md:hidden p-2 rounded-lg bg-white border border-gray-200 shadow-sm text-gray-700"
-        aria-label="Abrir menu"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+      {/* Botão hamburger — mobile only (oculto dentro de conversa ativa) */}
+      {!/^\/chats\/.+/.test(pathname) && (
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="fixed top-3 left-3 z-50 md:hidden p-2 rounded-lg bg-white border border-gray-200 shadow-sm text-gray-700"
+          aria-label="Abrir menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      )}
 
       {/* Sidebar desktop */}
       <aside
