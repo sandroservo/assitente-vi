@@ -437,14 +437,14 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   return (
     <>
       {/* Barra de busca e abas */}
-      <div className="mb-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex gap-2 flex-wrap">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
               className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                "px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap shrink-0",
                 activeCategory === cat.id
                   ? "bg-[#FE3E6E] text-white shadow-md"
                   : "bg-white text-gray-600 border border-gray-200 hover:border-pink-300 hover:text-pink-600"
@@ -482,23 +482,24 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
         </div>
       ) : (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-8 gap-2 pb-4 min-h-0">
+          <div className="flex gap-2 pb-4 min-h-0 overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-8 scrollbar-hide">
             {COLUMNS.map((column) => {
               const columnLeads = getLeadsByStatus(column.id);
               return (
                 <div
                   key={column.id}
                   className={cn(
-                    "rounded-xl border min-w-0 flex flex-col",
+                    "rounded-xl border flex flex-col snap-start",
+                    "w-[75vw] min-w-[75vw] sm:w-[45vw] sm:min-w-[45vw] md:w-auto md:min-w-0",
                     column.bgColor,
                     column.borderColor
                   )}
                 >
                   <div className={cn(
-                    "px-4 py-3 rounded-t-xl flex items-center justify-between shrink-0",
+                    "px-3 md:px-4 py-2.5 md:py-3 rounded-t-xl flex items-center justify-between shrink-0",
                     column.headerBg
                   )}>
-                    <h3 className="font-semibold text-gray-800">{column.title}</h3>
+                    <h3 className="font-semibold text-gray-800 text-sm md:text-base truncate">{column.title}</h3>
                     <span className={cn(
                       "text-white text-sm font-medium px-2.5 py-0.5 rounded-full",
                       column.badgeColor
@@ -509,7 +510,7 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
 
                   <div
                     ref={(el) => { columnScrollRefs.current[column.id] = el; }}
-                    className="overflow-y-auto max-h-[calc(100vh-250px)] min-h-[120px] flex-1 scrollbar-hide"
+                    className="overflow-y-auto max-h-[calc(100vh-280px)] md:max-h-[calc(100vh-250px)] min-h-[120px] flex-1 scrollbar-hide"
                   >
                     <Droppable droppableId={column.id}>
                       {(provided, snapshot) => (
