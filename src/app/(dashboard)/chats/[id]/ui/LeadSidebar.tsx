@@ -102,7 +102,10 @@ export default function LeadSidebar({
   if (!isOpen) return null;
 
   return (
-    <div className="w-[320px] min-w-[320px] border-l bg-white flex flex-col h-full overflow-y-auto">
+    <div className="fixed inset-0 z-40 md:relative md:inset-auto md:z-auto flex">
+      {/* Backdrop mobile */}
+      <div className="flex-1 bg-black/40 md:hidden" onClick={onClose} />
+    <div className="w-[300px] md:w-[320px] min-w-[300px] md:min-w-[320px] border-l bg-white flex flex-col h-full overflow-y-auto ml-auto md:ml-0">
       {/* Header */}
       <div className="px-4 py-3 border-b bg-gray-50/80 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-700">Detalhes do Lead</h3>
@@ -244,6 +247,7 @@ export default function LeadSidebar({
           </div>
         </>
       )}
+    </div>
     </div>
   );
 }

@@ -20,7 +20,7 @@ export default async function KnowledgePage() {
   const categories = [...new Set(knowledgeItems.map((item: (typeof knowledgeItems)[number]) => item.category))] as string[];
 
   return (
-    <div className="p-6 space-y-6 h-full overflow-auto">
+    <div className="p-4 pt-14 md:p-6 md:pt-6 space-y-4 md:space-y-6 h-full overflow-auto">
       <KnowledgeManager 
         initialItems={knowledgeItems} 
         categories={categories}

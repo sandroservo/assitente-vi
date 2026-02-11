@@ -27,7 +27,9 @@ import {
   Trash2,
   AlertTriangle,
   Info,
+  ArrowLeft,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import InboxConversation from "./InboxConversation";
@@ -322,28 +324,38 @@ export default function ChatPageClient({
     }
   }
 
+  const router = useRouter();
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0 bg-gray-50">
         {/* Header */}
-        <header className="bg-white border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-4">
+        <header className="bg-white border-b px-3 md:px-6 py-3 flex items-center justify-between flex-shrink-0 gap-2">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0">
+            {/* Botão voltar — mobile only */}
+            <button
+              onClick={() => router.push("/chats")}
+              className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 shrink-0"
+              aria-label="Voltar para conversas"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
             {lead.avatarUrl ? (
               <img
                 src={lead.avatarUrl}
                 alt={displayName}
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-medium">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-medium text-sm shrink-0">
                 {getInitials(lead.name || lead.pushName, lead.phone)}
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold">{displayName}</h2>
-                <Badge className={cn("text-xs", badge.className)}>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+                <h2 className="font-semibold text-sm md:text-base truncate">{displayName}</h2>
+                <Badge className={cn("text-[10px] md:text-xs hidden sm:inline-flex", badge.className)}>
                   {badge.label}
                 </Badge>
                 {lead.leadScore > 0 && (
@@ -358,19 +370,19 @@ export default function ChatPageClient({
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500 flex items-center gap-1">
+              <p className="text-xs md:text-sm text-gray-500 flex items-center gap-1">
                 <Phone className="h-3 w-3" />
                 {lead.phone}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2 shrink-0">
             <button
               onClick={handleHandoff}
               disabled={handoffLoading}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50",
+                "px-2 md:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50",
                 lead.ownerType === "human"
                   ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
                   : "bg-purple-100 text-purple-700 hover:bg-purple-200"
@@ -378,18 +390,18 @@ export default function ChatPageClient({
               title={lead.ownerType === "human" ? "Devolver para Vi" : "Assumir atendimento"}
             >
               {lead.ownerType === "human" ? (
-                <span className="flex items-center gap-1"><Bot className="h-3.5 w-3.5" /> Devolver p/ Vi</span>
+                <span className="flex items-center gap-1"><Bot className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Devolver p/ Vi</span></span>
               ) : (
-                <span className="flex items-center gap-1"><UserCheck className="h-3.5 w-3.5" /> Assumir</span>
+                <span className="flex items-center gap-1"><UserCheck className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Assumir</span></span>
               )}
             </button>
             <button
               onClick={handleParouResponder}
               disabled={parouResponderLoading}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors disabled:opacity-50"
+              className="px-2 md:px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors disabled:opacity-50"
               title="Marcar como parou de responder"
             >
-              ⏳ Parou responder
+              <span className="flex items-center gap-1">⏳<span className="hidden sm:inline"> Parou responder</span></span>
             </button>
             <button
               onClick={() => setSidebarOpen((prev) => !prev)}

@@ -48,15 +48,15 @@ export default async function LeadsPage() {
   }));
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-4 pt-14 md:p-6 md:pt-6 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 md:mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center shrink-0">
             <Heart className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Kanban de Leads</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800">Kanban de Leads</h1>
             <p className="text-gray-500 text-sm">
               Gerencie seus clientes através do funil de vendas
             </p>

@@ -143,9 +143,13 @@ export default function ConversationSidebar({
   });
 
   return (
-    <div className="w-[340px] min-w-[340px] border-r bg-white flex flex-col h-full">
+    <div className={cn(
+      "border-r bg-white flex flex-col h-full",
+      "w-full md:w-[340px] md:min-w-[340px]",
+      activeId ? "hidden md:flex" : "flex"
+    )}>
       {/* Header */}
-      <div className="px-4 py-3 border-b bg-gray-50/80">
+      <div className="px-4 pt-12 md:pt-3 py-3 border-b bg-gray-50/80">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-800">Conversas</h2>
           <span className="text-xs text-gray-500">

@@ -80,14 +80,14 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="p-6 space-y-6 min-h-screen">
+    <div className="p-4 pt-14 md:p-6 md:pt-6 space-y-4 md:space-y-6 min-h-screen">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-500">Home &gt; Dashboard</p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         {stats.slice(0, 3).map((stat: typeof stats[number]) => (
           <div key={stat.title} className="bg-white rounded-xl p-5 border border-gray-100">
             <div className="flex items-center gap-4">
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
         <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-100">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-800">Clientes ativos</h2>

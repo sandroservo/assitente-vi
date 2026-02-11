@@ -283,15 +283,15 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-4 pt-14 md:p-6 md:pt-6 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
+      <div className="mb-4 md:mb-6 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#FE3E6E] to-[#C24695] rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#FE3E6E] to-[#C24695] rounded-lg flex items-center justify-center shrink-0">
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Contatos</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800">Contatos</h1>
             <p className="text-gray-500 text-sm">
               {contacts.length} contatos | {selectedIds.size} selecionados
             </p>
@@ -314,8 +314,8 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 mb-4 flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
@@ -335,120 +335,114 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
           )}
         </div>
 
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
-          aria-label="Filtrar por status"
-        >
-          <option value="todos">Todos os Status</option>
-          {statuses.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABELS[s] || s}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
+            aria-label="Filtrar por status"
+          >
+            <option value="todos">Status</option>
+            {statuses.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABELS[s] || s}
+              </option>
+            ))}
+          </select>
 
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
-          aria-label="Filtrar por categoria"
-        >
-          <option value="todos">Todas Categorias</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 cursor-pointer"
+            aria-label="Filtrar por categoria"
+          >
+            <option value="todos">Categoria</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Tabela de contatos */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        {/* Header da tabela */}
-        <div className="grid grid-cols-[40px_1fr_160px_120px_100px_80px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          <div className="flex items-center justify-center">
-            <input
-              type="checkbox"
-              checked={filtered.length > 0 && selectedIds.size === filtered.length}
-              onChange={toggleSelectAll}
-              className="w-4 h-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500 cursor-pointer"
-              aria-label="Selecionar todos"
-            />
-          </div>
-          <div>Contato</div>
-          <div>Telefone</div>
-          <div>Status</div>
-          <div>Score</div>
-          <div>Tags</div>
-        </div>
+      {/* Selecionar todos */}
+      <div className="bg-white rounded-t-xl border border-b-0 border-gray-100 px-4 py-2 flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={filtered.length > 0 && selectedIds.size === filtered.length}
+          onChange={toggleSelectAll}
+          className="w-4 h-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500 cursor-pointer"
+          aria-label="Selecionar todos"
+        />
+        <span className="text-xs text-gray-500">
+          {selectedIds.size > 0 ? `${selectedIds.size} selecionado(s)` : "Selecionar todos"}
+        </span>
+      </div>
 
-        {/* Lista */}
+      {/* Lista de contatos */}
+      <div className="bg-white rounded-b-xl border border-t-0 border-gray-100 overflow-hidden">
         {filtered.length === 0 ? (
           <div className="py-16 text-center text-gray-400">
             <Users className="w-10 h-10 mx-auto mb-3 opacity-50" />
             <p className="text-sm">Nenhum contato encontrado</p>
           </div>
         ) : (
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+          <div className="max-h-[calc(100vh-320px)] overflow-y-auto divide-y divide-gray-50">
             {filtered.map((contact) => (
               <label
                 key={contact.id}
                 className={cn(
-                  "grid grid-cols-[40px_1fr_160px_120px_100px_80px] gap-4 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors items-center",
+                  "flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors",
                   selectedIds.has(contact.id) && "bg-pink-50/60 hover:bg-pink-50/60"
                 )}
               >
-                <div className="flex items-center justify-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(contact.id)}
-                    onChange={() => toggleSelect(contact.id)}
-                    className="w-4 h-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500 cursor-pointer"
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(contact.id)}
+                  onChange={() => toggleSelect(contact.id)}
+                  className="w-4 h-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500 cursor-pointer shrink-0"
+                />
+
+                {contact.avatarUrl ? (
+                  <img
+                    src={contact.avatarUrl}
+                    alt={contact.name}
+                    className="w-10 h-10 rounded-full object-cover shrink-0"
                   />
-                </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                    {getInitials(contact.name, contact.phone)}
+                  </div>
+                )}
 
-                <div className="flex items-center gap-3 min-w-0">
-                  {contact.avatarUrl ? (
-                    <img
-                      src={contact.avatarUrl}
-                      alt={contact.name}
-                      className="w-9 h-9 rounded-full object-cover shrink-0"
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white text-xs font-semibold shrink-0">
-                      {getInitials(contact.name, contact.phone)}
-                    </div>
-                  )}
-                  <span className="text-sm font-medium text-gray-800 truncate">
-                    {contact.name || formatPhone(contact.phone)}
-                  </span>
-                </div>
-
-                <div className="text-sm text-gray-500 font-mono">
-                  {formatPhone(contact.phone)}
-                </div>
-
-                <div>
-                  <span className="inline-flex px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-gray-600">
-                    {STATUS_LABELS[contact.status] || contact.status}
-                  </span>
-                </div>
-
-                <div className="text-sm font-semibold text-gray-700">
-                  {contact.leadScore}
-                </div>
-
-                <div className="flex gap-1 flex-wrap">
-                  {contact.tags.slice(0, 2).map((tag) => (
-                    <span
-                      key={tag.id}
-                      className="inline-block w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: tag.color }}
-                      title={tag.name}
-                    />
-                  ))}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-gray-800 truncate">
+                      {contact.name || formatPhone(contact.phone)}
+                    </span>
+                    <span className="text-xs text-gray-400 font-mono shrink-0 hidden sm:block">
+                      {formatPhone(contact.phone)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="inline-flex px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-gray-600">
+                      {STATUS_LABELS[contact.status] || contact.status}
+                    </span>
+                    {contact.leadScore > 0 && (
+                      <span className="text-[10px] font-bold text-gray-500">
+                        Score: {contact.leadScore}
+                      </span>
+                    )}
+                    {contact.tags.slice(0, 2).map((tag) => (
+                      <span
+                        key={tag.id}
+                        className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: tag.color }}
+                        title={tag.name}
+                      />
+                    ))}
+                  </div>
                 </div>
               </label>
             ))}

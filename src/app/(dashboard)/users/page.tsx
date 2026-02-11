@@ -43,7 +43,7 @@ export default async function UsersPage() {
   }));
 
   return (
-    <div className="p-6">
+    <div className="p-4 pt-14 md:p-6 md:pt-6">
       <UsersManager 
         users={users} 
         currentUserId={session.user.id}

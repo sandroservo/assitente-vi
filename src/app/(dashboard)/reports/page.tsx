@@ -102,7 +102,7 @@ export default async function ReportsPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 pt-14 md:p-6 md:pt-6">
       <ReportsView 
         userStats={userStats}
         stats={stats}
