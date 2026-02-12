@@ -117,13 +117,17 @@ export async function POST(req: Request) {
       profilePicture = (await evolutionGetProfilePicture(phone)) ?? undefined;
     }
 
+    // pushName só é confiável em mensagens recebidas (!fromMe)
+    // Mensagens enviadas (fromMe) carregam o nome da conta business, não do cliente
+    const clientPushName = !fromMe ? pushName : undefined;
+
     if (lead) {
       lead = await prisma.lead.update({
         where: { id: lead.id },
         data: {
           lastMessageAt: new Date(),
-          ...(pushName && { pushName }),
-          ...(pushName && !lead.name && { name: pushName }),
+          ...(clientPushName && { pushName: clientPushName }),
+          ...(clientPushName && !lead.name && { name: clientPushName }),
           ...(profilePicture && !lead.avatarUrl && { avatarUrl: profilePicture }),
         },
       });
@@ -132,8 +136,8 @@ export async function POST(req: Request) {
         data: {
           organizationId,
           phone,
-          name: pushName || null,
-          pushName: pushName || null,
+          name: clientPushName || null,
+          pushName: clientPushName || null,
           avatarUrl: profilePicture || null,
           status: "NOVO",
           ownerType: "bot",
