@@ -10,6 +10,7 @@ import { prisma } from "./prisma";
 import { getSystemSettings } from "./settings";
 import { getAllKnowledge, searchKnowledge, formatKnowledgeForAI } from "./knowledge";
 import { getAllMemories, formatMemoriesForAI, extractAndSaveMemories } from "./memory";
+import { listarClientesVencidos, hasCobrancaToken } from "./amovidas-api";
 
 async function getOpenAIClient() {
   const settings = await getSystemSettings();
@@ -79,6 +80,7 @@ TOM E ESTILO:
 
 REGRAS DE CONTEÚDO:
 - Use EXCLUSIVAMENTE o que está em <Tool Information>. NUNCA invente dados (valores, regras, prazos).
+- Se houver bloco "Cobranças vencidas" na Tool Information, use para responder perguntas sobre clientes em atraso, inadimplentes ou faturas vencidas. Resuma de forma objetiva (ex.: "Temos X clientes com cobrança em atraso").
 - Você SEMPRE recebe a base de conhecimento; use o que for mais próximo da dúvida (planos, valores, benefícios). Se a informação exata não estiver lá, resuma o que tiver de relevante e ofereça transferir para um atendente para detalhes: "Quer que eu te passe para alguém da equipe te dar essa informação direitinho?"
 - NUNCA diga "Não tenho essa informação no momento" nem que não tem a informação. Prefira usar algo da base + oferecer atendente humano.
 - Antes de citar preço ou enviar link: confira se está na Tool Information. Só envie links que existam nela. Se houver mais de um valor (ex.: 37,00 e 37,90), use o principal e pode oferecer o link oficial para confirmar.
@@ -147,7 +149,40 @@ export async function generateAIResponse(
       baseKnowledge.forEach((k) => byId.set(k.id, k));
       knowledge = Array.from(byId.values());
     }
-    const toolInformation = formatKnowledgeForAI(knowledge);
+    let toolInformation = formatKnowledgeForAI(knowledge);
+
+    // Se a mensagem menciona cobrança/vencidos e temos token, busca dados em tempo real do Amo Vidas
+    const cobrancaKeywords = [
+      "vencidos", "em atraso", "cobrança", "cobrancas", "inadimplentes",
+      "quem deve", "clientes vencidos", "faturas vencidas", "pagamentos atrasados",
+      "lista de vencidos", "quantos vencidos",
+    ];
+    const msgLower = userMessage.toLowerCase();
+    const isCobrancaQuery = cobrancaKeywords.some((k) => msgLower.includes(k));
+    if (isCobrancaQuery && hasCobrancaToken()) {
+      const cobrancaData = await listarClientesVencidos();
+      if (cobrancaData.ok && cobrancaData.clients && cobrancaData.clients.length >= 0) {
+        const cobrancaBlock = [
+          "<Tool Information>",
+          "## Cobranças vencidas (dados em tempo real do sistema Amo Vidas)",
+          `Total de clientes com cobrança em atraso: ${cobrancaData.total ?? cobrancaData.clients.length}`,
+          "",
+          cobrancaData.clients.length > 0
+            ? cobrancaData.clients
+                .slice(0, 20)
+                .map(
+                  (c) =>
+                    `- ${c.customerName}: R$ ${c.value.toFixed(2)}, ${c.daysOverdue} dias em atraso (vencimento: ${c.dueDate})`
+                )
+                .join("\n")
+            : "Nenhum cliente com cobrança vencida no momento.",
+          "</Tool Information>",
+        ].join("\n");
+        toolInformation = toolInformation
+          ? `${toolInformation}\n\n${cobrancaBlock}`
+          : cobrancaBlock;
+      }
+    }
 
     // Busca memórias do lead
     const leadMemories = await getAllMemories(context.leadId);

@@ -22,6 +22,12 @@ Contexto para a IA (e para a equipe) saber **onde paramos** no projeto da Secret
 
 ---
 
+## Integração Amo Vidas (cobrança)
+
+Quando o lead pergunta sobre **clientes vencidos**, **cobranças em atraso** ou **inadimplentes**, a Vi consulta em tempo real a API do sistema Amo Vidas (`GET /api/agent/cobranca/overdue`) e inclui os dados no contexto. Requer `AMOVIDAS_API_URL` e `AMOVIDAS_AGENT_TOKEN` no `.env`.
+
+---
+
 ## Pendências / próximos passos (lista do fluxo)
 
 - **Resumo da conversa** – Gerar e salvar resumo no lead (campos `summary` / `notes` já existem no modelo Lead).
@@ -52,6 +58,7 @@ Isso executa `scripts/seed-knowledge.ts` → `seed-knowledge-full.ts`: **apaga**
 |------|---------|
 | Webhook Evolution | `src/app/api/webhooks/evolution/route.ts` |
 | IA (prompt, conhecimento, status do lead) | `src/lib/ai.ts` |
+| Amo Vidas API (cobrança vencidos) | `src/lib/amovidas-api.ts` |
 | Mídia (Whisper, Vision) | `src/lib/media.ts` |
 | Evolution (envio, base64 mídia) | `src/lib/evolution.ts` |
 | Lista de exceção (API) | `src/app/api/excluded-contacts/` |
