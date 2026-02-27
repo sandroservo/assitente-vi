@@ -147,6 +147,8 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
   const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const columnScrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const columnSentinelRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [mounted, setMounted] = useState(false);
@@ -340,6 +342,11 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
         body: JSON.stringify({
           name: formData.get("name"),
           category: formData.get("category"),
+          email: formData.get("email") || null,
+          city: formData.get("city") || null,
+          priority: formData.get("priority"),
+          notes: formData.get("notes") || null,
+          tagIds: selectedTags,
         }),
       });
       if (res.ok) {
@@ -355,6 +362,24 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
       setIsSaving(false);
     }
   };
+
+  // Busca tags disponíveis e inicializa tags do lead ao abrir modal de edição
+  useEffect(() => {
+    if (!editingLead) return;
+    setSelectedTags(editingLead.tags.map((t) => t.id));
+    fetch("/api/tags")
+      .then((r) => r.json())
+      .then((d) => setAvailableTags(d.tags || []))
+      .catch(() => {});
+  }, [editingLead]);
+
+  function toggleTag(tagId: string) {
+    setSelectedTags((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId]
+    );
+  }
 
   const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -604,11 +629,15 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                                           {lead.tags.slice(0, 3).map((tag) => (
                                             <span
                                               key={tag.id}
-                                              className="w-2 h-2 rounded-full"
+                                              className="text-[9px] font-medium px-1.5 py-0.5 rounded-full text-white"
                                               style={{ backgroundColor: tag.color }}
-                                              title={tag.name}
-                                            />
+                                            >
+                                              {tag.name}
+                                            </span>
                                           ))}
+                                          {lead.tags.length > 3 && (
+                                            <span className="text-[9px] text-gray-400">+{lead.tags.length - 3}</span>
+                                          )}
                                         </div>
                                       )}
 
@@ -693,44 +722,112 @@ export function LeadsKanban({ initialLeads, initialHasMore = false }: LeadsKanba
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleSaveLead} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  defaultValue={editingLead.name || editingLead.pushName || ""}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none"
-                  placeholder="Nome do contato"
-                />
+            <form onSubmit={handleSaveLead} className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                  <input
+                    id="edit-name"
+                    type="text"
+                    name="name"
+                    defaultValue={editingLead.name || editingLead.pushName || ""}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none text-sm"
+                    placeholder="Nome do contato"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                  <input
+                    type="text"
+                    value={formatPhone(editingLead.phone)}
+                    disabled
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    id="edit-email"
+                    type="email"
+                    name="email"
+                    defaultValue={(editingLead as any).email || ""}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none text-sm"
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-city" className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                  <input
+                    id="edit-city"
+                    type="text"
+                    name="city"
+                    defaultValue={(editingLead as any).city || ""}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none text-sm"
+                    placeholder="Cidade"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-priority" className="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+                  <select
+                    id="edit-priority"
+                    name="priority"
+                    defaultValue={editingLead.priority || "low"}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none text-sm"
+                  >
+                    <option value="low">Baixa</option>
+                    <option value="medium">Média</option>
+                    <option value="high">Alta</option>
+                  </select>
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Telefone
-                </label>
-                <input
-                  type="text"
-                  value={formatPhone(editingLead.phone)}
-                  disabled
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Categoria
-                </label>
+                <label htmlFor="edit-category" className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
                 <select
+                  id="edit-category"
                   name="category"
                   defaultValue={editingLead.category || "geral"}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none text-sm"
                 >
                   <option value="geral">Geral</option>
                   <option value="rotina">Cliente Rotina</option>
                   <option value="especializado">Cliente Especializado</option>
                   <option value="cobertura_total">Cliente Cobertura Total</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Etiquetas</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableTags.map((tag) => (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      className={cn(
+                        "text-xs px-2.5 py-1 rounded-full font-medium transition-all border",
+                        selectedTags.includes(tag.id)
+                          ? "text-white border-transparent"
+                          : "text-gray-600 border-gray-200 hover:border-pink-300"
+                      )}
+                      style={selectedTags.includes(tag.id) ? { backgroundColor: tag.color } : {}}
+                    >
+                      {tag.name}
+                    </button>
+                  ))}
+                  {availableTags.length === 0 && (
+                    <span className="text-xs text-gray-400">Nenhuma etiqueta disponível</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="edit-notes" className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                <textarea
+                  id="edit-notes"
+                  name="notes"
+                  defaultValue={(editingLead as any).notes || ""}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none resize-none text-sm"
+                  placeholder="Anotações sobre o lead..."
+                />
               </div>
               <div className="flex gap-3 pt-2">
                 <button

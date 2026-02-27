@@ -16,27 +16,29 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const { name, email, phone, city, notes, summary, category } = body;
+    const { name, email, phone, city, notes, summary, category, priority, tagIds } = body;
 
-    const updateData: Record<string, string> = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
+    const updateData: Record<string, any> = {};
+    if (name !== undefined) updateData.name = name || null;
+    if (email !== undefined) updateData.email = email || null;
     if (phone) updateData.phone = phone;
-    if (city) updateData.city = city;
-    if (notes) updateData.notes = notes;
-    if (summary) updateData.summary = summary;
+    if (city !== undefined) updateData.city = city || null;
+    if (notes !== undefined) updateData.notes = notes || null;
+    if (summary !== undefined) updateData.summary = summary || null;
     if (category) updateData.category = category;
+    if (priority) updateData.priority = priority;
 
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { ok: false, error: "no fields to update" },
-        { status: 400 }
-      );
+    // Atualiza tags via relação many-to-many (set substitui todas)
+    if (Array.isArray(tagIds)) {
+      updateData.tags = {
+        set: tagIds.map((tagId: string) => ({ id: tagId })),
+      };
     }
 
     const lead = await prisma.lead.update({
       where: { id },
       data: updateData,
+      include: { tags: true },
     });
 
     return NextResponse.json({ ok: true, lead });

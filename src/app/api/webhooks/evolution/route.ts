@@ -323,6 +323,54 @@ export async function POST(req: Request) {
     ];
 
     try {
+      // Verifica se é a primeira resposta do bot (nenhuma mensagem "out" anterior)
+      const previousBotMessages = await prisma.message.count({
+        where: { conversationId: conversation.id, direction: "out" },
+      });
+
+      const isFirstBotResponse = previousBotMessages === 0;
+
+      // Na primeira resposta, envia card dos 3 planos ANTES do texto
+      // Exceção: se o lead perguntou sobre um plano específico
+      if (isFirstBotResponse) {
+        const inputLower = (text ?? "").toLowerCase();
+        const mentionedSpecificPlan =
+          inputLower.includes("rotina") ||
+          inputLower.includes("especializado") ||
+          inputLower.includes("cobertura total");
+
+        if (!mentionedSpecificPlan) {
+          try {
+            const planosPath = path.join(process.cwd(), "public", "cards", "planos.jpeg");
+            const planosBuffer = await readFile(planosPath);
+            const planosBase64 = planosBuffer.toString("base64");
+
+            await evolutionSendMedia({
+              number: phone,
+              mediatype: "image",
+              media: planosBase64,
+              mimetype: "image/jpeg",
+              caption: "Conheça nossos planos - Amo Vidas Clube de Saúde 💖",
+              fileName: "planos.jpeg",
+            });
+
+            await prisma.message.create({
+              data: {
+                conversationId: conversation.id,
+                direction: "out",
+                type: "image",
+                body: "[Imagem enviada: Planos Amo Vidas]",
+                sentAt: new Date(),
+              },
+            });
+
+            console.log("[Bot] Card dos 3 planos enviado (primeira resposta)");
+          } catch (planosErr) {
+            console.error("[Bot] Erro ao enviar card dos planos:", planosErr);
+          }
+        }
+      }
+
       // Envia mensagem de forma humanizada (com "digitando" e pausas)
       await evolutionSendTextHumanized({ number: phone, text: botResponse });
       
