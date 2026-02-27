@@ -71,6 +71,10 @@ interface ChatPageClientProps {
     direction: string;
     createdAt: Date;
     sentByUserName?: string | null;
+    providerId?: string | null;
+    quotedMessageId?: string | null;
+    status?: string | null;
+    editedAt?: string | null;
   }>;
 }
 

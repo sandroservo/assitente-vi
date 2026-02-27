@@ -68,6 +68,10 @@ export default async function ChatDetailPage({
     direction: m.direction,
     createdAt: m.createdAt,
     sentByUserName: m.sentByUser?.name ?? null,
+    providerId: m.providerId ?? null,
+    quotedMessageId: m.quotedMessageId ?? null,
+    status: m.status ?? null,
+    editedAt: m.editedAt ? m.editedAt.toISOString() : null,
   }));
 
   return (
