@@ -90,6 +90,17 @@ function getInitials(name: string | null, phone: string): string {
   return phone.slice(-2);
 }
 
+function formatLastSeen(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return `há ${hours}h`;
+  const d = new Date(isoDate);
+  return `${d.toLocaleDateString("pt-BR")} ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
 function getScoreColor(score: number): string {
   if (score >= 800) return "bg-red-500";
   if (score >= 600) return "bg-orange-500";
@@ -129,6 +140,7 @@ export default function ChatPageClient({
 
   // Presença online do cliente
   const [clientOnline, setClientOnline] = useState(false);
+  const [lastSeen, setLastSeen] = useState<string | null>(null);
 
   // Edição inline na aba Detalhes
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -182,6 +194,7 @@ export default function ChatPageClient({
         if (res.ok && mounted) {
           const data = await res.json();
           setClientOnline(data.available === true);
+          setLastSeen(data.lastSeen ?? null);
         }
       } catch { /* ignore */ }
     }
@@ -401,7 +414,13 @@ export default function ChatPageClient({
                   "w-2 h-2 rounded-full flex-shrink-0",
                   clientOnline ? "bg-emerald-500" : "bg-gray-300"
                 )} title={clientOnline ? "Online" : "Offline"} />
-                <span className="text-[10px]">{clientOnline ? "online" : "offline"}</span>
+                <span className="text-[10px]">
+                  {clientOnline
+                    ? "online"
+                    : lastSeen
+                      ? `visto ${formatLastSeen(lastSeen)}`
+                      : "offline"}
+                </span>
               </p>
             </div>
           </div>
