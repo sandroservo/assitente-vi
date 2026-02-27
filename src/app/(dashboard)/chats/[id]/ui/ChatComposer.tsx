@@ -20,6 +20,9 @@ import {
   FileText,
   Smile,
   LayoutGrid,
+  Reply,
+  Pencil,
+  Contact,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EmojiPicker from "@/components/chat/EmojiPicker";
@@ -27,6 +30,13 @@ import EmojiPicker from "@/components/chat/EmojiPicker";
 interface ChatComposerProps {
   conversationId: string;
   onToast?: (message: string, type: "success" | "error" | "info") => void;
+}
+
+interface ReplyMessage {
+  id: string;
+  body: string | null;
+  direction: "in" | "out";
+  sentByUserName?: string | null;
 }
 
 export default function ChatComposer({ conversationId, onToast }: ChatComposerProps) {
@@ -39,12 +49,37 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showCardsGallery, setShowCardsGallery] = useState(false);
   const [sendingCard, setSendingCard] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ReplyMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<ReplyMessage | null>(null);
+  const [showContactPicker, setShowContactPicker] = useState(false);
+  const [savedContacts, setSavedContacts] = useState<Array<{ id: string; name: string; phone: string; organization?: string }>>([]);
+  const [contactSearch, setContactSearch] = useState("");
+  const [sendingContact, setSendingContact] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Registra callbacks para comunicação com InboxConversation
+  useEffect(() => {
+    (window as any).__composerSetReply = (msg: ReplyMessage | null) => {
+      setEditingMessage(null);
+      setReplyingTo(msg);
+      textareaRef.current?.focus();
+    };
+    (window as any).__composerSetEdit = (msg: ReplyMessage | null) => {
+      setReplyingTo(null);
+      setEditingMessage(msg);
+      if (msg?.body) setText(msg.body);
+      textareaRef.current?.focus();
+    };
+    return () => {
+      delete (window as any).__composerSetReply;
+      delete (window as any).__composerSetEdit;
+    };
+  }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -81,12 +116,42 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
   async function sendText() {
     if (!text.trim() || loading) return;
 
+    // Modo edição: atualiza mensagem existente
+    if (editingMessage) {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/messages/${editingMessage.id}/edit`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text.trim() }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          onToast?.(data.error ?? "Erro ao editar mensagem", "error");
+          return;
+        }
+        onToast?.("Mensagem editada", "success");
+        setText("");
+        setEditingMessage(null);
+        triggerRefetch();
+      } catch {
+        onToast?.("Erro ao editar mensagem", "error");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, text }),
+        body: JSON.stringify({
+          conversationId,
+          text,
+          quotedMessageId: replyingTo?.id || undefined,
+        }),
       });
 
       if (!res.ok) {
@@ -96,6 +161,7 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
       }
 
       setText("");
+      setReplyingTo(null);
       triggerRefetch();
       requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (error) {
@@ -103,6 +169,48 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
       onToast?.("Erro ao enviar mensagem", "error");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchSavedContacts() {
+    try {
+      const res = await fetch("/api/contacts/saved");
+      if (res.ok) {
+        const data = await res.json();
+        setSavedContacts(data.contacts || []);
+      }
+    } catch {
+      // silently fail
+    }
+  }
+
+  async function sendSavedContact(contact: { name: string; phone: string; organization?: string }) {
+    setSendingContact(true);
+    try {
+      const res = await fetch("/api/messages/send-contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId,
+          contacts: [{
+            fullName: contact.name,
+            phoneNumber: contact.phone,
+            organization: contact.organization || "",
+          }],
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        onToast?.(data.error ?? "Erro ao enviar contato", "error");
+        return;
+      }
+      onToast?.("Contato enviado", "success");
+      setShowContactPicker(false);
+      triggerRefetch();
+    } catch {
+      onToast?.("Erro ao enviar contato", "error");
+    } finally {
+      setSendingContact(false);
     }
   }
 
@@ -381,6 +489,48 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
 
   return (
     <div>
+      {/* Reply bar */}
+      {replyingTo && (
+        <div className="px-4 pt-3 pb-1">
+          <div className="flex items-center gap-2 p-2 bg-pink-50 rounded-lg border border-pink-200">
+            <Reply className="h-4 w-4 text-pink-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-pink-600">
+                {replyingTo.direction === "out" ? (replyingTo.sentByUserName || "Vi") : "Lead"}
+              </p>
+              <p className="text-xs text-gray-600 truncate">{replyingTo.body || "Mídia"}</p>
+            </div>
+            <button
+              onClick={() => setReplyingTo(null)}
+              className="p-1 rounded-full hover:bg-pink-100 transition-colors"
+              aria-label="Cancelar resposta"
+            >
+              <X className="h-3.5 w-3.5 text-pink-400" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit bar */}
+      {editingMessage && (
+        <div className="px-4 pt-3 pb-1">
+          <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+            <Pencil className="h-4 w-4 text-blue-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-blue-600">Editando mensagem</p>
+              <p className="text-xs text-gray-600 truncate">{editingMessage.body}</p>
+            </div>
+            <button
+              onClick={() => { setEditingMessage(null); setText(""); }}
+              className="p-1 rounded-full hover:bg-blue-100 transition-colors"
+              aria-label="Cancelar edição"
+            >
+              <X className="h-3.5 w-3.5 text-blue-400" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Attachment preview */}
       {attachedFile && (
         <div className="px-4 pt-3 pb-1">
@@ -411,6 +561,56 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
             >
               <X className="h-4 w-4 text-gray-400" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Contact picker */}
+      {showContactPicker && (
+        <div className="px-4 pt-3 pb-1">
+          <div className="bg-gray-50 rounded-xl border p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Enviar Contato</h4>
+              <button
+                onClick={() => setShowContactPicker(false)}
+                className="p-1 rounded-md hover:bg-gray-200 transition-colors"
+                aria-label="Fechar contatos"
+              >
+                <X className="h-3.5 w-3.5 text-gray-400" />
+              </button>
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar contato..."
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs border rounded-lg mb-2 focus:outline-none focus:ring-1 focus:ring-pink-300"
+            />
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {savedContacts
+                .filter((c) =>
+                  !contactSearch ||
+                  c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
+                  c.phone.includes(contactSearch)
+                )
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => sendSavedContact(c)}
+                    disabled={sendingContact}
+                    className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-pink-50 transition-colors text-left disabled:opacity-50"
+                  >
+                    <Contact className="h-4 w-4 text-pink-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 truncate">{c.name}</p>
+                      <p className="text-[10px] text-gray-500">{c.phone}{c.organization ? ` · ${c.organization}` : ""}</p>
+                    </div>
+                  </button>
+                ))}
+              {savedContacts.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-3">Nenhum contato salvo</p>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -499,6 +699,18 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
               aria-label="Enviar arquivo"
             >
               <Paperclip className="h-5 w-5 text-gray-500" />
+            </Button>
+            {/* Contact */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full hover:bg-teal-50"
+              onClick={() => { setShowContactPicker((prev) => !prev); if (!showContactPicker) fetchSavedContacts(); }}
+              disabled={sendingContact}
+              title="Enviar contato"
+              aria-label="Enviar contato"
+            >
+              <Contact className="h-5 w-5 text-teal-500" />
             </Button>
             {/* Cards */}
             <Button

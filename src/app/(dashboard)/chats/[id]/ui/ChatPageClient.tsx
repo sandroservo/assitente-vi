@@ -123,6 +123,9 @@ export default function ChatPageClient({
   const [handoffLoading, setHandoffLoading] = useState(false);
   const [parouResponderLoading, setParouResponderLoading] = useState(false);
 
+  // Presença online do cliente
+  const [clientOnline, setClientOnline] = useState(false);
+
   // Edição inline na aba Detalhes
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -165,6 +168,23 @@ export default function ChatPageClient({
       setLoadingReminders(false);
     }
   }, [lead.id]);
+
+  // Polling de presença do cliente (online/offline)
+  useEffect(() => {
+    let mounted = true;
+    async function checkPresence() {
+      try {
+        const res = await fetch(`/api/conversations/${conversationId}/presence`);
+        if (res.ok && mounted) {
+          const data = await res.json();
+          setClientOnline(data.available === true);
+        }
+      } catch { /* ignore */ }
+    }
+    checkPresence();
+    const interval = setInterval(checkPresence, 30000);
+    return () => { mounted = false; clearInterval(interval); };
+  }, [conversationId]);
 
   useEffect(() => {
     if (activeTab === "detalhes") {
@@ -370,9 +390,14 @@ export default function ChatPageClient({
                   </span>
                 )}
               </div>
-              <p className="text-xs md:text-sm text-gray-500 flex items-center gap-1">
+              <p className="text-xs md:text-sm text-gray-500 flex items-center gap-1.5">
                 <Phone className="h-3 w-3" />
                 {lead.phone}
+                <span className={cn(
+                  "w-2 h-2 rounded-full flex-shrink-0",
+                  clientOnline ? "bg-emerald-500" : "bg-gray-300"
+                )} title={clientOnline ? "Online" : "Offline"} />
+                <span className="text-[10px]">{clientOnline ? "online" : "offline"}</span>
               </p>
             </div>
           </div>

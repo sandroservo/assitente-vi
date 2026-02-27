@@ -335,6 +335,171 @@ export async function evolutionGetProfilePicture(number: string): Promise<string
   }
 }
 
+/**
+ * Envia texto respondendo uma mensagem específica (quote reply)
+ */
+export async function evolutionSendTextWithQuote({
+  number,
+  text,
+  quotedId,
+  remoteJid,
+}: {
+  number: string;
+  text: string;
+  quotedId: string;
+  remoteJid: string;
+}) {
+  const { baseUrl, instance, token } = await getEvolutionConfig();
+  if (!baseUrl || !instance || !token) {
+    throw new Error("Evolution API não configurada");
+  }
+
+  const url = `${baseUrl.replace(/\/api\/?$/, "")}/message/sendText/${instance}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: token },
+    body: JSON.stringify({
+      number,
+      text,
+      quoted: {
+        key: {
+          remoteJid,
+          fromMe: false,
+          id: quotedId,
+        },
+        message: { conversation: "" },
+      },
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[Evolution] Send quoted failed:", res.status, body);
+    throw new Error(`Evolution sendTextWithQuote failed: ${res.status} ${body}`);
+  }
+  return res.json().catch(() => ({}));
+}
+
+/**
+ * Edita uma mensagem já enviada no WhatsApp
+ */
+export async function evolutionUpdateMessage({
+  remoteJid,
+  messageId,
+  text,
+}: {
+  remoteJid: string;
+  messageId: string;
+  text: string;
+}) {
+  const { baseUrl, instance, token } = await getEvolutionConfig();
+  if (!baseUrl || !instance || !token) {
+    throw new Error("Evolution API não configurada");
+  }
+
+  const url = `${baseUrl.replace(/\/api\/?$/, "")}/chat/updateMessage/${instance}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: token },
+    body: JSON.stringify({
+      number: remoteJid.split("@")[0],
+      text,
+      key: {
+        remoteJid,
+        fromMe: true,
+        id: messageId,
+      },
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[Evolution] Update message failed:", res.status, body);
+    throw new Error(`Evolution updateMessage failed: ${res.status} ${body}`);
+  }
+  return res.json().catch(() => ({}));
+}
+
+/**
+ * Busca o status de presença (online/offline) de um contato
+ */
+export async function evolutionFetchPresence(number: string): Promise<{ available: boolean; lastSeen?: string } | null> {
+  const { baseUrl, instance, token } = await getEvolutionConfig();
+  if (!baseUrl || !instance || !token) return null;
+
+  const url = `${baseUrl.replace(/\/api\/?$/, "")}/chat/fetchPresence/${instance}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: token },
+      body: JSON.stringify({ number }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Pode retornar array ou objeto
+    const presence = Array.isArray(data) ? data[0] : data;
+    return {
+      available: presence?.presence === "available" || presence?.status === "available",
+      lastSeen: presence?.lastSeen || presence?.last || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Envia um contato (vCard) via WhatsApp
+ */
+export async function evolutionSendContact({
+  number,
+  contacts,
+}: {
+  number: string;
+  contacts: Array<{
+    fullName: string;
+    phoneNumber: string;
+    organization?: string;
+    email?: string;
+  }>;
+}) {
+  const { baseUrl, instance, token } = await getEvolutionConfig();
+  if (!baseUrl || !instance || !token) {
+    throw new Error("Evolution API não configurada");
+  }
+
+  const url = `${baseUrl.replace(/\/api\/?$/, "")}/message/sendContact/${instance}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: token },
+    body: JSON.stringify({
+      number,
+      contactMessage: contacts.map((c) => ({
+        fullName: c.fullName,
+        phoneNumber: c.phoneNumber,
+        organization: c.organization || "",
+        email: c.email || "",
+        wuid: `${c.phoneNumber.replace(/\D/g, "")}@s.whatsapp.net`,
+      })),
+      options: { presence: "composing" },
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[Evolution] Send contact failed:", res.status, body);
+    throw new Error(`Evolution sendContact failed: ${res.status} ${body}`);
+  }
+  return res.json().catch(() => ({}));
+}
+
 export async function evolutionSendTextHumanized({ number, text }: SendTextArgs) {
   const parts = splitMessage(text);
   

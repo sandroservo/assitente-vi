@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, Image as ImageIcon, FileText, Video, Bot, UserCheck } from "lucide-react";
+import { Mic, Image as ImageIcon, FileText, Video, Bot, UserCheck, Reply, Pencil, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const POLLING_INTERVAL = 2000;
@@ -22,6 +22,10 @@ interface Message {
   direction: "in" | "out";
   createdAt: Date | string;
   sentByUserName?: string | null;
+  providerId?: string | null;
+  quotedMessageId?: string | null;
+  status?: string | null;
+  editedAt?: string | null;
 }
 
 interface InboxConversationProps {
@@ -35,6 +39,10 @@ interface InboxConversationProps {
     direction: string;
     createdAt: Date;
     sentByUserName?: string | null;
+    providerId?: string | null;
+    quotedMessageId?: string | null;
+    status?: string | null;
+    editedAt?: string | null;
   }>;
 }
 
@@ -68,17 +76,32 @@ function shouldShowDateSeparator(
   return currDate !== prevDate;
 }
 
-function ReadReceipt({ isOut }: { isOut: boolean }) {
+function ReadReceipt({ isOut, status }: { isOut: boolean; status?: string | null }) {
   if (!isOut) return null;
+  const isRead = status === "read";
+  const isDelivered = status === "delivered" || isRead;
+  const fillColor = isRead ? "#53bdeb" : isDelivered ? "#8696a0" : "#8696a0";
+
+  if (!isDelivered && status === "sent") {
+    return (
+      <svg viewBox="0 0 12 11" width="12" height="11" className="inline-block ml-1 flex-shrink-0">
+        <path
+          d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.66.017.52.52 0 0 0 .016.678l2.34 2.438a.456.456 0 0 0 .327.146h.008a.456.456 0 0 0 .33-.157l6.532-8.054a.52.52 0 0 0-.007-.685z"
+          fill={fillColor}
+        />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 16 11" width="16" height="11" className="inline-block ml-1 flex-shrink-0">
       <path
         d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.66.017.52.52 0 0 0 .016.678l2.34 2.438a.456.456 0 0 0 .327.146h.008a.456.456 0 0 0 .33-.157l6.532-8.054a.52.52 0 0 0-.007-.685z"
-        fill="#53bdeb"
+        fill={fillColor}
       />
       <path
         d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-1.2-1.25-.66.814 1.86 1.938a.456.456 0 0 0 .327.146h.008a.456.456 0 0 0 .33-.157l6.532-8.054a.52.52 0 0 0-.007-.685z"
-        fill="#53bdeb"
+        fill={fillColor}
       />
     </svg>
   );
@@ -113,6 +136,10 @@ export default function InboxConversation({
       direction: m.direction as "in" | "out",
       createdAt: m.createdAt,
       sentByUserName: m.sentByUserName ?? null,
+      providerId: m.providerId ?? null,
+      quotedMessageId: m.quotedMessageId ?? null,
+      status: m.status ?? null,
+      editedAt: m.editedAt ?? null,
     }))
   );
   const lastMessageTime = useRef<string | null>(null);
@@ -143,12 +170,22 @@ export default function InboxConversation({
       const data = await res.json();
       if (data.ok && data.messages?.length > 0) {
         setMessages((prev) => {
-          const existingIds = new Set(prev.map((m) => m.id));
-          const newMsgs = data.messages.filter(
-            (m: Message) => !existingIds.has(m.id)
-          );
-          if (newMsgs.length === 0) return prev;
-          return [...prev, ...newMsgs].sort(
+          const existingMap = new Map(prev.map((m) => [m.id, m]));
+          let changed = false;
+          for (const incoming of data.messages as Message[]) {
+            const existing = existingMap.get(incoming.id);
+            if (existing) {
+              if (existing.status !== incoming.status || existing.body !== incoming.body || existing.editedAt !== incoming.editedAt) {
+                existingMap.set(incoming.id, { ...existing, ...incoming });
+                changed = true;
+              }
+            } else {
+              existingMap.set(incoming.id, incoming);
+              changed = true;
+            }
+          }
+          if (!changed) return prev;
+          return Array.from(existingMap.values()).sort(
             (a, b) =>
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
@@ -164,13 +201,36 @@ export default function InboxConversation({
     return () => clearInterval(interval);
   }, [fetchNewMessages]);
 
-  // Expõe fetchNewMessages para o composer chamar após enviar
+  // Expõe fetchNewMessages e setReplyingTo para o composer
   useEffect(() => {
     (window as any).__inboxRefetch = fetchNewMessages;
+    (window as any).__inboxSetReply = (msg: Message | null) => {
+      if (typeof (window as any).__composerSetReply === "function") {
+        (window as any).__composerSetReply(msg);
+      }
+    };
     return () => {
       delete (window as any).__inboxRefetch;
+      delete (window as any).__inboxSetReply;
     };
   }, [fetchNewMessages]);
+
+  const handleReply = (msg: Message) => {
+    if (typeof (window as any).__composerSetReply === "function") {
+      (window as any).__composerSetReply(msg);
+    }
+  };
+
+  const handleEdit = (msg: Message) => {
+    if (typeof (window as any).__composerSetEdit === "function") {
+      (window as any).__composerSetEdit(msg);
+    }
+  };
+
+  const getQuotedMessage = (quotedId: string | null | undefined): Message | undefined => {
+    if (!quotedId) return undefined;
+    return messages.find((m) => m.id === quotedId);
+  };
 
   return (
     <div
@@ -194,8 +254,9 @@ export default function InboxConversation({
           const prev = i > 0 ? messages[i - 1] : null;
           const showDate = shouldShowDateSeparator(m, prev);
           const isOut = m.direction === "out";
-          const isMediaType = m.type !== "text";
+          const isMediaType = m.type !== "text" && m.type !== "contact";
           const isHuman = m.sentByUserName != null;
+          const quoted = getQuotedMessage(m.quotedMessageId);
 
           return (
             <div key={m.id}>
@@ -211,10 +272,35 @@ export default function InboxConversation({
               {/* Message bubble with avatar */}
               <div
                 className={cn(
-                  "flex mb-3",
+                  "flex mb-3 group",
                   isOut ? "justify-end" : "justify-start"
                 )}
               >
+                {/* Action buttons — aparecem em hover */}
+                <div className={cn(
+                  "flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity",
+                  isOut ? "order-first mr-1" : "order-last ml-1"
+                )}>
+                  <button
+                    onClick={() => handleReply(m)}
+                    className="p-1.5 rounded-full hover:bg-gray-200/80 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Responder"
+                    aria-label="Responder mensagem"
+                  >
+                    <Reply className="h-3.5 w-3.5" />
+                  </button>
+                  {isOut && m.type === "text" && (
+                    <button
+                      onClick={() => handleEdit(m)}
+                      className="p-1.5 rounded-full hover:bg-gray-200/80 text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Editar"
+                      aria-label="Editar mensagem"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
                 <div
                   className={cn(
                     "max-w-[75%] md:max-w-[65%] flex gap-2",
@@ -251,6 +337,21 @@ export default function InboxConversation({
                           : "bg-white text-gray-800 rounded-2xl rounded-tl-md"
                       )}
                     >
+                      {/* Quoted message preview */}
+                      {quoted && (
+                        <div className={cn(
+                          "mb-2 px-3 py-1.5 rounded-lg border-l-3 text-[11px] leading-snug",
+                          isOut
+                            ? "bg-white/15 border-white/50 text-white/80"
+                            : "bg-gray-100 border-pink-400 text-gray-600"
+                        )}>
+                          <p className="font-semibold text-[10px] mb-0.5">
+                            {quoted.direction === "out" ? (quoted.sentByUserName || "Vi") : "Lead"}
+                          </p>
+                          <p className="line-clamp-2">{quoted.body || "Mídia"}</p>
+                        </div>
+                      )}
+
                       {/* Imagem inline */}
                       {m.type === "image" && m.mediaUrl && (
                         <div className="mb-2 -mx-2 -mt-1">
@@ -326,13 +427,21 @@ export default function InboxConversation({
                         "flex items-center gap-1 mt-1",
                         isOut ? "justify-end" : "justify-start"
                       )}>
+                        {m.editedAt && (
+                          <span className={cn(
+                            "text-[9px] italic",
+                            isOut ? "text-white/50" : "text-gray-400"
+                          )}>
+                            editada
+                          </span>
+                        )}
                         <span className={cn(
                           "text-[10px]",
                           isOut ? "text-white/70" : "text-gray-400"
                         )}>
                           {formatTime(m.createdAt)}
                         </span>
-                        <ReadReceipt isOut={isOut} />
+                        <ReadReceipt isOut={isOut} status={m.status} />
                       </div>
                     </div>
                     {/* Sender label below bubble */}

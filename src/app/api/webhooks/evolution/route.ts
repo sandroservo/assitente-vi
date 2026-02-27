@@ -29,6 +29,34 @@ export async function POST(req: Request) {
       );
     }
 
+    // Processa eventos de atualização de status (read receipts)
+    const event = payload?.event;
+    if (event === "messages.update" || event === "messages.ack") {
+      const updates = Array.isArray(payload?.data) ? payload.data : [payload?.data];
+      for (const upd of updates) {
+        const msgId = upd?.key?.id || upd?.id;
+        const ack = upd?.update?.ack ?? upd?.ack ?? upd?.update?.status;
+        if (msgId && ack != null) {
+          const statusMap: Record<number, string> = {
+            1: "sent",
+            2: "delivered",
+            3: "read",
+            4: "read",
+          };
+          const newStatus = typeof ack === "number" ? statusMap[ack] : String(ack).toLowerCase();
+          if (newStatus) {
+            try {
+              await prisma.message.updateMany({
+                where: { providerId: msgId },
+                data: { status: newStatus },
+              });
+            } catch { /* ignore */ }
+          }
+        }
+      }
+      return NextResponse.json({ ok: true, event: "status_update" });
+    }
+
     const remoteJid: string | undefined = payload?.data?.key?.remoteJid;
     const providerId: string | undefined = payload?.data?.key?.id;
     const fromMe: boolean = payload?.data?.key?.fromMe === true;

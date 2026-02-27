@@ -5,14 +5,14 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { evolutionSendText } from "@/lib/evolution";
+import { evolutionSendText, evolutionSendTextWithQuote } from "@/lib/evolution";
 import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    const { conversationId, text } = await req.json();
+    const { conversationId, text, quotedMessageId } = await req.json();
 
-    console.log("[Send Message] Request:", { conversationId, textLength: text?.length });
+    console.log("[Send Message] Request:", { conversationId, textLength: text?.length, quotedMessageId });
 
     if (!conversationId || !text) {
       return NextResponse.json(
@@ -34,10 +34,37 @@ export async function POST(req: Request) {
       );
     }
 
+    // Identifica o atendente logado
+    const session = await auth();
+    const sentByUserId = session?.user?.id || null;
+    const userName = session?.user?.name || null;
+
+    // Prefixa nome do atendente no texto enviado ao WhatsApp
+    const whatsappText = userName ? `*[${userName}]:*\n${text}` : text;
+
+    // Busca providerId da mensagem citada (se houver reply)
+    let quotedProviderId: string | null = null;
+    if (quotedMessageId) {
+      const quotedMsg = await prisma.message.findUnique({
+        where: { id: quotedMessageId },
+        select: { providerId: true },
+      });
+      quotedProviderId = quotedMsg?.providerId || null;
+    }
+
     console.log("[Send Message] Sending to:", convo.lead.phone);
 
     try {
-      await evolutionSendText({ number: convo.lead.phone, text });
+      if (quotedProviderId) {
+        await evolutionSendTextWithQuote({
+          number: convo.lead.phone,
+          text: whatsappText,
+          quotedId: quotedProviderId,
+          remoteJid: convo.remoteJid,
+        });
+      } else {
+        await evolutionSendText({ number: convo.lead.phone, text: whatsappText });
+      }
       console.log("[Send Message] Message sent successfully");
     } catch (evolutionError) {
       console.error("[Send Message] Evolution API error:", evolutionError);
@@ -48,17 +75,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Identifica o atendente logado
-    const session = await auth();
-    const sentByUserId = session?.user?.id || null;
-    console.log("[Send Message] Auth session:", { userId: sentByUserId, userName: session?.user?.name });
-
     const msg = await prisma.message.create({
       data: {
         conversationId,
         direction: "out",
         type: "text",
         body: text,
+        quotedMessageId: quotedMessageId || null,
+        quotedProviderId,
+        status: "sent",
         sentByUserId,
         sentAt: new Date(),
       },
