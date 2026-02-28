@@ -80,6 +80,15 @@ function getMessagePreview(conv: Conversation): string {
   if (conv.lastMessageType === "image") return `${prefix}📷 Imagem`;
   if (conv.lastMessageType === "video") return `${prefix}🎬 Vídeo`;
   if (conv.lastMessageType === "document") return `${prefix}📄 Documento`;
+  if (conv.lastMessageType === "contact") {
+    try {
+      const parsed = JSON.parse(conv.lastMessageBody);
+      if (Array.isArray(parsed) && parsed[0]?.fullName) {
+        return `${prefix}📇 ${parsed.map((c: { fullName: string }) => c.fullName).join(", ")}`;
+      }
+    } catch { /* fallback abaixo */ }
+    return `${prefix}📇 Contato`;
+  }
 
   const body = conv.lastMessageBody;
   if (body.startsWith("[Áudio")) return `${prefix}🎤 Áudio`;
