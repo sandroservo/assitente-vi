@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function GET(req: Request) {
   try {
@@ -18,34 +19,24 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: true, contacts: [] });
     }
 
-    const contacts = await prisma.savedContact.findMany({
-      where: {
-        organizationId: org.id,
-        ...(search
-          ? {
-              OR: [
-                { name: { contains: search, mode: "insensitive" } },
-                { phone: { contains: search } },
-                { organization: { contains: search, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: { name: "asc" },
-      take: 200,
-    });
+    const contacts = await prisma.$queryRaw<
+      Array<{ id: string; name: string; phone: string; organization: string | null; category: string | null }>
+    >`
+      SELECT id, name, phone, organization, category
+      FROM "SavedContact"
+      WHERE "organizationId" = ${org.id}
+        ${search ? Prisma.sql`AND (
+          name ILIKE ${"%" + search + "%"}
+          OR phone LIKE ${"%" + search + "%"}
+          OR organization ILIKE ${"%" + search + "%"}
+        )` : Prisma.empty}
+      ORDER BY
+        CASE WHEN name ~ '[a-zA-ZÀ-ÿ]' THEN 0 ELSE 1 END,
+        name COLLATE "C" ASC
+      LIMIT 200
+    `;
 
-    // Ordena: contatos com nome legível primeiro, depois os sem nome
-    const hasLetters = /[a-zA-ZÀ-ÿ]/;
-    const sorted = contacts.sort((a, b) => {
-      const aHasName = hasLetters.test(a.name);
-      const bHasName = hasLetters.test(b.name);
-      if (aHasName && !bHasName) return -1;
-      if (!aHasName && bHasName) return 1;
-      return a.name.localeCompare(b.name, "pt-BR");
-    });
-
-    return NextResponse.json({ ok: true, contacts: sorted });
+    return NextResponse.json({ ok: true, contacts });
   } catch (error) {
     console.error("[Saved Contacts] GET error:", error);
     return NextResponse.json(
