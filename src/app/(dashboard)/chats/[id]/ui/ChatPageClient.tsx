@@ -35,6 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import InboxConversation from "./InboxConversation";
 import ChatComposer from "./ChatComposer";
 import LeadSidebar from "./LeadSidebar";
+import { LeadAvatar } from "@/components/LeadAvatar";
 
 interface Tag {
   id: string;
@@ -378,17 +379,14 @@ export default function ChatPageClient({
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            {lead.avatarUrl ? (
-              <img
-                src={lead.avatarUrl}
-                alt={displayName}
-                className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover shrink-0"
-              />
-            ) : (
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-medium text-sm shrink-0">
-                {getInitials(lead.name || lead.pushName, lead.phone)}
-              </div>
-            )}
+            <LeadAvatar
+              leadId={lead.id}
+              avatarUrl={lead.avatarUrl}
+              name={lead.name || lead.pushName}
+              phone={lead.phone}
+              size="md"
+              className="shrink-0"
+            />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <h2 className="font-semibold text-sm md:text-base truncate">{displayName}</h2>

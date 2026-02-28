@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import HandoffButton from "./HandoffButton";
 import ClienteParouResponderButton from "./ClienteParouResponderButton";
 import LeadActions from "./LeadActions";
+import { LeadAvatar } from "@/components/LeadAvatar";
 
 interface Tag {
   id: string;
@@ -120,17 +121,14 @@ export default function LeadSidebar({
 
       {/* Profile */}
       <div className="px-4 py-5 flex flex-col items-center text-center">
-        {lead.avatarUrl ? (
-          <img
-            src={lead.avatarUrl}
-            alt={lead.name || lead.phone}
-            className="w-20 h-20 rounded-full object-cover mb-3"
-          />
-        ) : (
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white text-2xl font-bold mb-3">
-            {getInitials(lead.name || lead.pushName, lead.phone)}
-          </div>
-        )}
+        <LeadAvatar
+          leadId={lead.id}
+          avatarUrl={lead.avatarUrl}
+          name={lead.name || lead.pushName}
+          phone={lead.phone}
+          size="lg"
+          className="mb-3"
+        />
         <h3 className="text-base font-semibold text-gray-900">
           {lead.name || lead.pushName || "Sem nome"}
         </h3>

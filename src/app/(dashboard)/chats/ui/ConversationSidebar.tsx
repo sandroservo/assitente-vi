@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, Bot, UserCheck, MessageSquare, Mic, Image as ImageIcon, X, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LeadAvatar } from "@/components/LeadAvatar";
 
 interface Conversation {
   id: string;
@@ -296,17 +297,13 @@ export default function ConversationSidebar({
             >
               {/* Avatar */}
               <div className="relative flex-shrink-0">
-                {conv.avatarUrl ? (
-                  <img
-                    src={conv.avatarUrl}
-                    alt={displayName}
-                    className="w-11 h-11 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white text-sm font-semibold">
-                    {getInitials(conv.name || conv.pushName, conv.phone)}
-                  </div>
-                )}
+                <LeadAvatar
+                  leadId={conv.leadId}
+                  avatarUrl={conv.avatarUrl}
+                  name={conv.name || conv.pushName}
+                  phone={conv.phone}
+                  size="md"
+                />
                 {/* Owner indicator */}
                 <div
                   className={cn(
@@ -391,13 +388,14 @@ export default function ConversationSidebar({
             }}
             role="alert"
           >
-            {tc.avatarUrl ? (
-              <img src={tc.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
-                {getInitials(tc.name || tc.pushName, tc.phone)}
-              </div>
-            )}
+            <LeadAvatar
+              leadId={tc.leadId}
+              avatarUrl={tc.avatarUrl}
+              name={tc.name || tc.pushName}
+              phone={tc.phone}
+              size="md"
+              className="shrink-0"
+            />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-800 truncate">
                 {tc.name || tc.pushName || tc.phone}
