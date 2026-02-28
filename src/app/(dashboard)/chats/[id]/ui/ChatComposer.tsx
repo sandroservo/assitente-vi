@@ -593,20 +593,26 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
                   c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
                   c.phone.includes(contactSearch)
                 )
-                .map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => sendSavedContact(c)}
-                    disabled={sendingContact}
-                    className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-pink-50 transition-colors text-left disabled:opacity-50"
-                  >
-                    <Contact className="h-4 w-4 text-pink-500 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-800 truncate">{c.name}</p>
-                      <p className="text-[10px] text-gray-500">{c.phone}{c.organization ? ` · ${c.organization}` : ""}</p>
-                    </div>
-                  </button>
-                ))}
+                .map((c) => {
+                  const hasRealName = /[a-zA-ZÀ-ÿ]/.test(c.name);
+                  const displayName = hasRealName ? c.name : c.phone;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => sendSavedContact(c)}
+                      disabled={sendingContact}
+                      className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-pink-50 transition-colors text-left disabled:opacity-50"
+                    >
+                      <Contact className="h-4 w-4 text-pink-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate">{displayName}</p>
+                        <p className="text-[10px] text-gray-500">
+                          {hasRealName ? c.phone : ""}{c.organization ? `${hasRealName ? " · " : ""}${c.organization}` : ""}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               {savedContacts.length === 0 && (
                 <p className="text-xs text-gray-400 text-center py-3">Nenhum contato salvo</p>
               )}

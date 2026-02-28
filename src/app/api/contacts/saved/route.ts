@@ -32,10 +32,20 @@ export async function GET(req: Request) {
           : {}),
       },
       orderBy: { name: "asc" },
-      take: 50,
+      take: 200,
     });
 
-    return NextResponse.json({ ok: true, contacts });
+    // Ordena: contatos com nome legível primeiro, depois os sem nome
+    const hasLetters = /[a-zA-ZÀ-ÿ]/;
+    const sorted = contacts.sort((a, b) => {
+      const aHasName = hasLetters.test(a.name);
+      const bHasName = hasLetters.test(b.name);
+      if (aHasName && !bHasName) return -1;
+      if (!aHasName && bHasName) return 1;
+      return a.name.localeCompare(b.name, "pt-BR");
+    });
+
+    return NextResponse.json({ ok: true, contacts: sorted });
   } catch (error) {
     console.error("[Saved Contacts] GET error:", error);
     return NextResponse.json(
