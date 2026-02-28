@@ -252,10 +252,18 @@ export async function generateAIResponse(
         content: `O nome do cliente é: ${context.leadName}`,
       });
     } else {
-      messages.push({
-        role: "system",
-        content: `Você ainda não sabe o nome do cliente. Pergunte o nome dele de forma natural.`,
-      });
+      const msgCount = context.messageHistory.filter(m => m.direction === "in").length;
+      if (msgCount >= 2) {
+        messages.push({
+          role: "system",
+          content: `ATENÇÃO: Você AINDA NÃO SABE o nome do cliente (já são ${msgCount + 1} mensagens dele). PRIORIDADE MÁXIMA: pergunte o nome AGORA de forma direta e calorosa. Ex: "Antes de continuar, como posso te chamar? 😊" — NÃO prossiga com o quiz sem saber o nome.`,
+        });
+      } else {
+        messages.push({
+          role: "system",
+          content: `Você ainda não sabe o nome do cliente. Pergunte o nome dele de forma natural e calorosa. Ex: "Como posso te chamar?"`,
+        });
+      }
     }
 
     // Contexto de email e cidade: Vi sabe o que já tem e o que falta pedir
@@ -282,10 +290,23 @@ export async function generateAIResponse(
     }
 
     if (missingData.length > 0 && context.leadName && !isFirstMessage) {
-      messages.push({
-        role: "system",
-        content: `Ainda FALTA coletar: ${missingData.join(" e ")}. Quando surgir um momento natural na conversa, peça de forma leve (ex: "Me passa seu email e de qual cidade você é? 📩"). Não force — espere um momento adequado. Pode pedir junto ou separado.`,
-      });
+      const inMsgCount = context.messageHistory.filter(m => m.direction === "in").length;
+      if (inMsgCount >= 4) {
+        messages.push({
+          role: "system",
+          content: `URGENTE: Ainda FALTA coletar: ${missingData.join(" e ")}. Já são ${inMsgCount + 1} mensagens do cliente e esses dados ainda não foram coletados. PEÇA AGORA de forma simpática mas direta. Ex: "Ah, me passa seu email pra eu te enviar as informações? E de qual cidade você é? 📩". NÃO adie mais.`,
+        });
+      } else if (inMsgCount >= 2) {
+        messages.push({
+          role: "system",
+          content: `Ainda FALTA coletar: ${missingData.join(" e ")}. Aproveite esta resposta para pedir de forma natural. Ex: "Me passa seu email e de qual cidade você é? Assim consigo te enviar tudo certinho 📩". Pode pedir junto ou separado.`,
+        });
+      } else {
+        messages.push({
+          role: "system",
+          content: `Dados que ainda faltam: ${missingData.join(" e ")}. Peça quando surgir um momento adequado na conversa.`,
+        });
+      }
     }
 
     // Adiciona histórico de mensagens (últimas 15)
@@ -364,12 +385,11 @@ function extractLeadData(
     }
   }
 
-  // Tenta extrair nome apenas com padrões explícitos ("me chamo X", "sou o X")
-  // NÃO usa fallback genérico para evitar salvar frases como nome
+  // Extrai nome: padrões explícitos + fallback para respostas curtas (quando bot perguntou o nome)
   if (!context.leadName) {
     const msg = message.trim();
     
-    // Palavras comuns que não são nomes de pessoa
+    // Palavras comuns que NÃO são nomes de pessoa
     const NOT_NAMES = new Set([
       "vi", "sim", "não", "nao", "oi", "ola", "olá", "ok", "então", "entao",
       "quanto", "custa", "qual", "valor", "preço", "preco", "plano", "planos",
@@ -378,11 +398,14 @@ function extractLeadData(
       "por", "favor", "bom", "dia", "boa", "tarde", "noite", "obrigado", "obrigada",
       "valeu", "tudo", "bem", "tá", "ta", "to", "tô", "aqui", "isso", "esse",
       "essa", "tem", "ter", "ser", "uma", "uns", "dos", "das", "para", "pra",
+      "saúde", "saude", "exame", "exames", "consulta", "consultas", "médico",
+      "medico", "clínica", "clinica", "hospital", "atendente", "humano",
+      "whatsapp", "mensagem", "obrigado", "brigado", "brigada",
     ]);
 
-    // Apenas padrões explícitos de identificação
+    // 1. Padrões explícitos de identificação
     const namePatterns = [
-      /(?:me chamo|meu nome é|sou o|sou a|pode me chamar de)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)?)/i,
+      /(?:me chamo|meu nome é|meu nome e|sou o|sou a|pode me chamar de|chamo|é o|é a)\s+([A-ZÀ-Úa-zà-ú][a-zà-ú]+(?:\s+[A-ZÀ-Úa-zà-ú][a-zà-ú]+){0,2})/i,
     ];
 
     for (const pattern of namePatterns) {
@@ -395,8 +418,39 @@ function extractLeadData(
           !/\d/.test(potentialName) &&
           !lowerWords.some((w) => NOT_NAMES.has(w))
         ) {
-          result.name = potentialName;
+          result.name = potentialName.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
           break;
+        }
+      }
+    }
+
+    // 2. Fallback: se a última msg do bot perguntou o nome e a resposta é curta (1-3 palavras)
+    if (!result.name) {
+      const lastBotMsg = context.messageHistory
+        .filter(m => m.direction === "out" && m.body)
+        .pop()?.body?.toLowerCase() || "";
+      const botAskedForName = lastBotMsg.includes("chamar") ||
+        lastBotMsg.includes("seu nome") ||
+        lastBotMsg.includes("quem fala") ||
+        lastBotMsg.includes("como posso te chamar") ||
+        lastBotMsg.includes("qual seu nome") ||
+        lastBotMsg.includes("qual o seu nome");
+
+      if (botAskedForName) {
+        // Remove saudações e pontuação da resposta
+        const cleaned = msg
+          .replace(/^(oi|olá|ola|hey|eai|e ai|bom dia|boa tarde|boa noite)[,!.\s]*/i, "")
+          .replace(/[!.,?]+$/g, "")
+          .trim();
+        const words = cleaned.split(/\s+/).filter(w => w.length >= 2);
+
+        if (words.length >= 1 && words.length <= 3) {
+          const allValid = words.every(w => 
+            /^[A-ZÀ-Úa-zà-ú]+$/.test(w) && !NOT_NAMES.has(w.toLowerCase())
+          );
+          if (allValid) {
+            result.name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+          }
         }
       }
     }
