@@ -480,14 +480,13 @@ export async function evolutionSendContact({
     headers: { "Content-Type": "application/json", apikey: token },
     body: JSON.stringify({
       number,
-      contactMessage: contacts.map((c) => ({
+      contact: contacts.map((c) => ({
         fullName: c.fullName,
-        phoneNumber: c.phoneNumber,
+        phoneNumber: c.phoneNumber.replace(/\D/g, ""),
         organization: c.organization || "",
         email: c.email || "",
         wuid: `${c.phoneNumber.replace(/\D/g, "")}@s.whatsapp.net`,
       })),
-      options: { presence: "composing" },
     }),
     signal: AbortSignal.timeout(30000),
   });
