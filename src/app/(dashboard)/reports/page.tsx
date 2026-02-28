@@ -76,16 +76,65 @@ export default async function ReportsPage() {
     _count: true,
   });
 
+  // Mensagens enviadas por usuário (30 dias)
+  const messagesByUser = await prisma.message.groupBy({
+    by: ["sentByUserId"],
+    where: {
+      sentByUserId: { not: null },
+      createdAt: { gte: thirtyDaysAgo },
+      direction: "out",
+    },
+    _count: true,
+  });
+
+  // Tempo médio de resposta por usuário (primeira msg humana após handoff)
+  const avgResponseTimes = await prisma.$queryRaw<Array<{ user_id: string; avg_seconds: number }>>`
+    SELECT 
+      m."sentByUserId" as user_id,
+      AVG(EXTRACT(EPOCH FROM (m."createdAt" - h."updatedAt"))) as avg_seconds
+    FROM "Message" m
+    JOIN "Handoff" h ON h."conversationId" = m."conversationId" AND h."assignedToId" = m."sentByUserId"
+    WHERE m."sentByUserId" IS NOT NULL
+      AND m.direction = 'out'
+      AND m."createdAt" >= ${thirtyDaysAgo}
+      AND m."createdAt" > h."updatedAt"
+      AND EXTRACT(EPOCH FROM (m."createdAt" - h."updatedAt")) > 0
+      AND EXTRACT(EPOCH FROM (m."createdAt" - h."updatedAt")) < 86400
+    GROUP BY m."sentByUserId"
+  `;
+
+  // Leads qualificados/fechados onde o usuário foi o último atendente
+  const conversionsPerUser = await prisma.$queryRaw<Array<{ user_id: string; qualified: bigint; closed: bigint }>>`
+    SELECT 
+      h."assignedToId" as user_id,
+      COUNT(DISTINCT CASE WHEN l.status IN ('QUALIFICADO', 'EM_NEGOCIACAO', 'PROPOSTA_ENVIADA') THEN l.id END) as qualified,
+      COUNT(DISTINCT CASE WHEN l.status = 'FECHADO' THEN l.id END) as closed
+    FROM "Handoff" h
+    JOIN "Lead" l ON l.id = h."leadId"
+    WHERE h."assignedToId" IS NOT NULL
+      AND h."createdAt" >= ${thirtyDaysAgo}
+    GROUP BY h."assignedToId"
+  `;
+
   // Calcula estatísticas por usuário
+  const msgMap = new Map(messagesByUser.map(m => [m.sentByUserId, m._count]));
+  const respTimeMap = new Map(avgResponseTimes.map(r => [r.user_id, Math.round(r.avg_seconds)]));
+  const convMap = new Map(conversionsPerUser.map(c => [c.user_id, { qualified: Number(c.qualified), closed: Number(c.closed) }]));
+
   const userStats = users.map((user: typeof users[number]) => {
     const userHandoffs = handoffs.filter((h: typeof handoffs[number]) => h.assignedToId === user.id);
     const completed = userHandoffs.filter((h: typeof handoffs[number]) => h.status === "closed").length;
+    const conv = convMap.get(user.id) || { qualified: 0, closed: 0 };
     
     return {
       ...user,
       totalHandoffs: userHandoffs.length,
       completedHandoffs: completed,
       pendingHandoffs: userHandoffs.length - completed,
+      messagesSent: msgMap.get(user.id) || 0,
+      avgResponseTimeSec: respTimeMap.get(user.id) || 0,
+      leadsQualified: conv.qualified,
+      leadsClosed: conv.closed,
     };
   });
 
