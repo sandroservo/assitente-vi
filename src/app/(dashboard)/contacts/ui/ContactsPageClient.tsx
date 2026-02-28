@@ -9,6 +9,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   X,
@@ -21,6 +22,8 @@ import {
   Users,
   Radio,
   Trash2,
+  Plus,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -92,10 +95,17 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [filterCategory, setFilterCategory] = useState<string>("todos");
+
+  // Novo contato
+  const [showNewContact, setShowNewContact] = useState(false);
+  const [newContact, setNewContact] = useState({ name: "", phone: "", email: "", category: "geral", notes: "" });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Broadcast state
   const [showBroadcast, setShowBroadcast] = useState(false);
@@ -271,6 +281,37 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
     }
   }, [contacts, selectedIds, broadcastMessage, broadcastImage, broadcastImageMime]);
 
+  const handleSaveContact = useCallback(async () => {
+    setSaveError(null);
+    if (!newContact.name.trim() || !newContact.phone.trim()) {
+      setSaveError("Nome e telefone são obrigatórios");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/contacts/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newContact),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setSaveError(data.error || "Erro ao salvar contato");
+        return;
+      }
+
+      setShowNewContact(false);
+      setNewContact({ name: "", phone: "", email: "", category: "geral", notes: "" });
+      router.refresh();
+    } catch {
+      setSaveError("Erro de conexão");
+    } finally {
+      setSaving(false);
+    }
+  }, [newContact, router]);
+
   const resetBroadcast = () => {
     setShowBroadcast(false);
     setBroadcastMessage("");
@@ -298,19 +339,30 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
           </div>
         </div>
 
-        {selectedIds.size > 0 && (
+        <div className="flex gap-2">
           <Button
-            onClick={() => {
-              setShowBroadcast(true);
-              setBroadcastDone(false);
-              setBroadcastLogs([]);
-            }}
-            className="bg-[#FE3E6E] hover:bg-[#C24695] text-white"
+            onClick={() => { setShowNewContact(true); setSaveError(null); }}
+            variant="outline"
+            className="border-pink-300 text-pink-600 hover:bg-pink-50"
           >
-            <Radio className="w-4 h-4 mr-2" />
-            Disparo em Massa ({selectedIds.size})
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Contato
           </Button>
-        )}
+
+          {selectedIds.size > 0 && (
+            <Button
+              onClick={() => {
+                setShowBroadcast(true);
+                setBroadcastDone(false);
+                setBroadcastLogs([]);
+              }}
+              className="bg-[#FE3E6E] hover:bg-[#C24695] text-white"
+            >
+              <Radio className="w-4 h-4 mr-2" />
+              Disparo em Massa ({selectedIds.size})
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filtros */}
@@ -449,6 +501,120 @@ export function ContactsPageClient({ contacts }: ContactsPageClientProps) {
           </div>
         )}
       </div>
+
+      {/* Modal Novo Contato */}
+      {showNewContact && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FE3E6E] to-[#C24695] flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-gray-800">Novo Contato</h2>
+              </div>
+              <button
+                onClick={() => setShowNewContact(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                <input
+                  id="contact-name"
+                  type="text"
+                  value={newContact.name}
+                  onChange={(e) => setNewContact((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Nome completo"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label htmlFor="contact-phone" className="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
+                <input
+                  id="contact-phone"
+                  type="tel"
+                  value={newContact.phone}
+                  onChange={(e) => setNewContact((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder="55999XXXXXXX"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                <input
+                  id="contact-email"
+                  type="email"
+                  value={newContact.email}
+                  onChange={(e) => setNewContact((p) => ({ ...p, email: e.target.value }))}
+                  placeholder="email@exemplo.com"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="contact-category" className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <select
+                  id="contact-category"
+                  value={newContact.category}
+                  onChange={(e) => setNewContact((p) => ({ ...p, category: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400 bg-white"
+                >
+                  <option value="geral">Geral</option>
+                  <option value="clinica">Clínica</option>
+                  <option value="medico">Médico</option>
+                  <option value="parceiro">Parceiro</option>
+                  <option value="fornecedor">Fornecedor</option>
+                  <option value="paciente">Paciente</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="contact-notes" className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                <textarea
+                  id="contact-notes"
+                  value={newContact.notes}
+                  onChange={(e) => setNewContact((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Anotações sobre o contato..."
+                  rows={2}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400"
+                />
+              </div>
+
+              {saveError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">
+                  {saveError}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setShowNewContact(false)} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveContact}
+                disabled={saving || !newContact.name.trim() || !newContact.phone.trim()}
+                className="bg-[#FE3E6E] hover:bg-[#C24695] text-white"
+              >
+                {saving ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</>
+                ) : (
+                  <><UserPlus className="w-4 h-4 mr-2" /> Salvar Contato</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Broadcast */}
       {showBroadcast && (
