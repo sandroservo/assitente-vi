@@ -172,6 +172,16 @@ export async function POST(req: Request) {
           lastMessageAt: new Date(),
         },
       });
+
+      // Adiciona automaticamente como contato salvo para envio via vCard
+      await prisma.savedContact.create({
+        data: {
+          organizationId,
+          name: clientPushName || phone,
+          phone,
+          category: "lead",
+        },
+      }).catch(() => { /* ignora duplicatas */ });
     }
 
     // Single-tenant: uma conversa por lead (busca por leadId apenas)
