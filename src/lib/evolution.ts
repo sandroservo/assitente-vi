@@ -485,7 +485,7 @@ export async function evolutionSendContact({
         phoneNumber: c.phoneNumber.replace(/\D/g, ""),
         organization: c.organization || "",
         email: c.email || "",
-        wuid: `${c.phoneNumber.replace(/\D/g, "")}@s.whatsapp.net`,
+        wuid: c.phoneNumber.replace(/\D/g, ""),
       })),
     }),
     signal: AbortSignal.timeout(30000),
