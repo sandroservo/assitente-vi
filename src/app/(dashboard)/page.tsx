@@ -5,8 +5,9 @@
 
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Prisma } from "@prisma/client";
 import { MessageSquare, Users, Clock, TrendingUp } from "lucide-react";
+import { DashboardChart } from "@/components/DashboardChart";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,9 @@ function getStatusSubtitle(status: string, ownerType: string): string {
 }
 
 export default async function DashboardPage() {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
   const [leadsCount, conversationsCount, pendingCount, conversationsInAttendance] =
     await Promise.all([
       prisma.lead.count(),
@@ -47,6 +51,70 @@ export default async function DashboardPage() {
         include: { lead: true },
       }),
     ]);
+
+  // Dados para gráficos
+  const [leadsByDay, messagesByDay, leadsByStatus] = await Promise.all([
+    prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+      SELECT DATE("createdAt") as day, COUNT(*) as count
+      FROM "Lead"
+      WHERE "createdAt" >= ${thirtyDaysAgo}
+      GROUP BY DATE("createdAt")
+      ORDER BY day
+    `,
+    prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+      SELECT DATE("createdAt") as day, COUNT(*) as count
+      FROM "Message"
+      WHERE "createdAt" >= ${thirtyDaysAgo}
+      GROUP BY DATE("createdAt")
+      ORDER BY day
+    `,
+    prisma.$queryRaw<Array<{ status: string; count: bigint }>>`
+      SELECT status, COUNT(*) as count
+      FROM "Lead"
+      GROUP BY status
+      ORDER BY count DESC
+    `,
+  ]);
+
+  // Montar série de 30 dias
+  const leadsMap = new Map(leadsByDay.map(r => [new Date(r.day).toISOString().slice(0, 10), Number(r.count)]));
+  const msgsMap = new Map(messagesByDay.map(r => [new Date(r.day).toISOString().slice(0, 10), Number(r.count)]));
+
+  const dailyData = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29 + i);
+    const key = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    return {
+      date: key,
+      label,
+      leads: leadsMap.get(key) || 0,
+      mensagens: msgsMap.get(key) || 0,
+    };
+  });
+
+  const statusLabels: Record<string, { label: string; color: string }> = {
+    NOVO: { label: "Novo", color: "#F472B6" },
+    EM_ATENDIMENTO: { label: "Atendimento", color: "#A78BFA" },
+    CONSCIENTIZADO: { label: "Conscient.", color: "#60A5FA" },
+    QUALIFICADO: { label: "Qualificado", color: "#34D399" },
+    EM_NEGOCIACAO: { label: "Negociação", color: "#FBBF24" },
+    PROPOSTA_ENVIADA: { label: "Proposta", color: "#C084FC" },
+    FECHADO: { label: "Fechado", color: "#10B981" },
+    HUMANO_SOLICITADO: { label: "Humano", color: "#FB923C" },
+    HUMANO_EM_ATENDIMENTO: { label: "Hum. Atend.", color: "#818CF8" },
+    PERDIDO: { label: "Perdido", color: "#9CA3AF" },
+  };
+
+  const statusData = leadsByStatus.map(r => {
+    const info = statusLabels[r.status] || { label: r.status, color: "#9CA3AF" };
+    return {
+      status: r.status,
+      label: info.label,
+      count: Number(r.count),
+      color: info.color,
+    };
+  });
 
   const stats = [
     {
@@ -114,12 +182,7 @@ export default async function DashboardPage() {
               Ver conversas
             </Link>
           </div>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-              <Users className="h-7 w-7 text-gray-400" />
-            </div>
-            <p className="text-gray-500 text-sm">Gráfico de clientes aparecerá aqui</p>
-          </div>
+          <DashboardChart dailyData={dailyData} statusData={statusData} />
         </div>
 
         <div className="bg-white rounded-xl p-6 border border-gray-100">
