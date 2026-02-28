@@ -50,14 +50,18 @@ export async function POST(req: Request) {
     const session = await auth();
     const sentByUserId = session?.user?.id || null;
 
-    const contactNames = contacts.map((c: { fullName: string }) => c.fullName).join(", ");
+    const contactData = contacts.map((c: { fullName: string; phoneNumber: string; organization?: string }) => ({
+      fullName: c.fullName,
+      phoneNumber: c.phoneNumber.replace(/\D/g, ""),
+      organization: c.organization || null,
+    }));
 
     const msg = await prisma.message.create({
       data: {
         conversationId,
         direction: "out",
         type: "contact",
-        body: `📇 Contato enviado: ${contactNames}`,
+        body: JSON.stringify(contactData),
         status: "sent",
         sentByUserId,
         sentAt: new Date(),

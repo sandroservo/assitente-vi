@@ -8,8 +8,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, Image as ImageIcon, FileText, Video, Bot, UserCheck, Reply, Pencil, Check } from "lucide-react";
+import { Mic, Image as ImageIcon, FileText, Video, Bot, UserCheck, Reply, Pencil, Check, Contact, MessageSquare, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 const POLLING_INTERVAL = 2000;
 
@@ -107,6 +108,24 @@ function ReadReceipt({ isOut, status }: { isOut: boolean; status?: string | null
   );
 }
 
+interface ContactData {
+  fullName: string;
+  phoneNumber: string;
+  organization?: string | null;
+}
+
+function parseContactBody(body: string): ContactData[] | null {
+  try {
+    const parsed = JSON.parse(body);
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].fullName) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function MessageTypeIcon({ type }: { type: string }) {
   switch (type) {
     case "audio":
@@ -142,9 +161,26 @@ export default function InboxConversation({
       editedAt: m.editedAt ?? null,
     }))
   );
+  const router = useRouter();
   const lastMessageTime = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const navigateToContact = useCallback(async (phone: string) => {
+    try {
+      const res = await fetch(`/api/contacts/find-conversation?phone=${encodeURIComponent(phone)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversationId) {
+          router.push(`/chats/${data.conversationId}`);
+          return;
+        }
+      }
+      window.open(`https://wa.me/${phone.replace(/\D/g, "")}`, "_blank");
+    } catch {
+      window.open(`https://wa.me/${phone.replace(/\D/g, "")}`, "_blank");
+    }
+  }, [router]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -410,8 +446,57 @@ export default function InboxConversation({
                         </span>
                       )}
 
-                      {/* Texto da mensagem (oculta body genérico para mídia com URL) */}
-                      {(!isMediaType || !m.mediaUrl) && m.body && (
+                      {/* Card de contato (vCard) */}
+                      {m.type === "contact" && m.body && (() => {
+                        const contacts = parseContactBody(m.body);
+                        if (!contacts) return (
+                          <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
+                        );
+                        return contacts.map((ct: ContactData, idx: number) => (
+                          <div key={idx} className={cn(
+                            "rounded-xl border p-3 min-w-[200px]",
+                            isOut ? "bg-white/15 border-white/30" : "bg-gray-50 border-gray-200"
+                          )}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
+                                isOut ? "bg-white/20 text-white" : "bg-pink-100 text-pink-600"
+                              )}>
+                                {ct.fullName?.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={cn("text-sm font-semibold truncate", isOut ? "text-white" : "text-gray-800")}>
+                                  {ct.fullName}
+                                </p>
+                                <p className={cn("text-[11px] flex items-center gap-1", isOut ? "text-white/70" : "text-gray-500")}>
+                                  <Phone className="h-3 w-3" />
+                                  {ct.phoneNumber}
+                                </p>
+                                {ct.organization && (
+                                  <p className={cn("text-[10px]", isOut ? "text-white/60" : "text-gray-400")}>
+                                    {ct.organization}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => navigateToContact(ct.phoneNumber)}
+                              className={cn(
+                                "w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                                isOut
+                                  ? "bg-white/20 hover:bg-white/30 text-white"
+                                  : "bg-pink-500 hover:bg-pink-600 text-white"
+                              )}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                              Conversar
+                            </button>
+                          </div>
+                        ));
+                      })()}
+
+                      {/* Texto da mensagem (oculta body genérico para mídia com URL e contatos) */}
+                      {m.type !== "contact" && (!isMediaType || !m.mediaUrl) && m.body && (
                         <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">
                           {m.body}
                         </p>
