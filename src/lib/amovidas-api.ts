@@ -27,9 +27,31 @@ export interface ClienteVencido {
   dueDate: string;
   phone: string | null;
   userId: number | null;
+  email?: string | null;
+  asaasCustomerId?: string | null;
+  asaasPaymentId?: string | null;
+  status?: string | null;
+  lastNote?: string | null;
+  lastContactAt?: string | null;
 }
 
-export async function listarClientesVencidos(): Promise<{
+export interface CobrancaFiltros {
+  days?: string; // '1-7' | '8-30' | '31+' | 'all'
+  minValue?: string | number;
+  search?: string;
+  status?: string;
+}
+
+export interface ObservacaoCobranca {
+  id: number;
+  note: string;
+  status: string;
+  author_name: string | null;
+  author_source: string;
+  created_at: string;
+}
+
+export async function listarClientesVencidos(filtros: CobrancaFiltros = {}): Promise<{
   ok: boolean;
   clients?: ClienteVencido[];
   total?: number;
@@ -39,7 +61,14 @@ export async function listarClientesVencidos(): Promise<{
     return { ok: false, error: "AMOVIDAS_AGENT_TOKEN não configurado" };
   }
   try {
-    const res = await fetch(`${BASE}/api/agent/cobranca/overdue`, {
+    const params = new URLSearchParams();
+    if (filtros.days && filtros.days !== "all") params.set("days", filtros.days);
+    if (filtros.minValue) params.set("minValue", String(filtros.minValue));
+    if (filtros.search) params.set("search", filtros.search);
+    if (filtros.status && filtros.status !== "all") params.set("status", filtros.status);
+    const qs = params.toString();
+
+    const res = await fetch(`${BASE}/api/agent/cobranca/overdue${qs ? `?${qs}` : ""}`, {
       method: "GET",
       headers: headers(),
     });
@@ -57,5 +86,98 @@ export async function listarClientesVencidos(): Promise<{
       ok: false,
       error: e instanceof Error ? e.message : String(e),
     };
+  }
+}
+
+/** Lista observações de cobrança de um cliente. */
+export async function listarObservacoesCobranca(params: {
+  userId?: number | null;
+  asaasCustomerId?: string | null;
+}): Promise<{ ok: boolean; notes?: ObservacaoCobranca[]; status?: string | null; error?: string }> {
+  if (!TOKEN) return { ok: false, error: "AMOVIDAS_AGENT_TOKEN não configurado" };
+  try {
+    const qs = new URLSearchParams();
+    if (params.userId) qs.set("user_id", String(params.userId));
+    else if (params.asaasCustomerId) qs.set("asaas_customer_id", params.asaasCustomerId);
+
+    const res = await fetch(`${BASE}/api/agent/cobranca/note?${qs}`, {
+      method: "GET",
+      headers: headers(),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: (data as { error?: string }).error || `HTTP ${res.status}` };
+    }
+    return {
+      ok: true,
+      notes: (data as { notes?: ObservacaoCobranca[] }).notes || [],
+      status: (data as { status?: string | null }).status ?? null,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** Registra uma observação de contato de cobrança. */
+export async function salvarObservacaoCobranca(payload: {
+  userId?: number | null;
+  asaasCustomerId?: string | null;
+  asaasPaymentId?: string | null;
+  note: string;
+  status?: string;
+  authorName?: string | null;
+}): Promise<{ ok: boolean; note?: ObservacaoCobranca; error?: string }> {
+  if (!TOKEN) return { ok: false, error: "AMOVIDAS_AGENT_TOKEN não configurado" };
+  try {
+    const res = await fetch(`${BASE}/api/agent/cobranca/note`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        user_id: payload.userId ?? null,
+        asaas_customer_id: payload.asaasCustomerId ?? null,
+        asaas_payment_id: payload.asaasPaymentId ?? null,
+        note: payload.note,
+        status: payload.status,
+        author_name: payload.authorName ?? null,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: (data as { error?: string }).error || `HTTP ${res.status}` };
+    }
+    return { ok: true, note: (data as { note?: ObservacaoCobranca }).note };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** Dispara mensagem padrão de cobrança no WhatsApp do cliente (via sistema). */
+export async function enviarCobranca(payload: {
+  userId?: number | null;
+  asaasCustomerId?: string | null;
+}): Promise<{ ok: boolean; message?: string; error?: string }> {
+  if (!TOKEN) return { ok: false, error: "AMOVIDAS_AGENT_TOKEN não configurado" };
+  try {
+    const res = await fetch(`${BASE}/api/agent/cobranca/send`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        user_id: payload.userId ?? null,
+        asaas_customer_id: payload.asaasCustomerId ?? null,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        ok: false,
+        error:
+          (data as { error?: string }).error ||
+          (data as { message?: string }).message ||
+          `HTTP ${res.status}`,
+      };
+    }
+    return { ok: true, message: (data as { message?: string }).message };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
