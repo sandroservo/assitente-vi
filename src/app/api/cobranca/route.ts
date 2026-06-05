@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
     minValue: searchParams.get("minValue") || undefined,
     search: searchParams.get("search") || undefined,
     status: searchParams.get("status") || undefined,
+    page: searchParams.get("page") || undefined,
+    limit: searchParams.get("limit") || undefined,
   });
 
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });

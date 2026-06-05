@@ -60,6 +60,10 @@ export default function CobrancaPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  const PER_PAGE = 10;
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
@@ -93,6 +97,8 @@ export default function CobrancaPage() {
       if (minValue) params.set("minValue", minValue);
       if (status !== "all") params.set("status", status);
       if (debouncedSearch) params.set("search", debouncedSearch);
+      params.set("page", String(page));
+      params.set("limit", String(PER_PAGE));
 
       const res = await fetch(`/api/cobranca?${params}`);
       const data = await res.json();
@@ -101,17 +107,23 @@ export default function CobrancaPage() {
       }
       setClients(data.clients || []);
       setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao carregar");
       setClients([]);
     } finally {
       setLoading(false);
     }
-  }, [days, minValue, status, debouncedSearch]);
+  }, [days, minValue, status, debouncedSearch, page]);
 
   useEffect(() => {
     fetchClients();
   }, [fetchClients]);
+
+  // Volta pra página 1 ao mudar qualquer filtro
+  useEffect(() => {
+    setPage(1);
+  }, [days, minValue, status, debouncedSearch]);
 
   const conversar = async (c: ClienteVencido) => {
     if (!c.phone) {
@@ -410,6 +422,30 @@ export default function CobrancaPage() {
                 </tbody>
               </table>
             </div>
+
+            {totalPages > 1 && (
+              <div className="px-4 py-3 border-t flex items-center justify-between">
+                <span className="text-sm text-gray-500">
+                  Página {page} de {totalPages} · {total} cliente(s)
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

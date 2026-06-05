@@ -41,6 +41,8 @@ export interface CobrancaFiltros {
   minValue?: string | number;
   search?: string;
   status?: string;
+  page?: string | number;
+  limit?: string | number;
 }
 
 export interface ObservacaoCobranca {
@@ -56,6 +58,9 @@ export async function listarClientesVencidos(filtros: CobrancaFiltros = {}): Pro
   ok: boolean;
   clients?: ClienteVencido[];
   total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
   error?: string;
 }> {
   if (!TOKEN) {
@@ -67,6 +72,8 @@ export async function listarClientesVencidos(filtros: CobrancaFiltros = {}): Pro
     if (filtros.minValue) params.set("minValue", String(filtros.minValue));
     if (filtros.search) params.set("search", filtros.search);
     if (filtros.status && filtros.status !== "all") params.set("status", filtros.status);
+    if (filtros.page) params.set("page", String(filtros.page));
+    if (filtros.limit) params.set("limit", String(filtros.limit));
     const qs = params.toString();
 
     const res = await fetch(`${BASE}/api/agent/cobranca/overdue${qs ? `?${qs}` : ""}`, {
@@ -77,10 +84,20 @@ export async function listarClientesVencidos(filtros: CobrancaFiltros = {}): Pro
     if (!res.ok) {
       return { ok: false, error: (data as { error?: string }).error || `HTTP ${res.status}` };
     }
+    const d = data as {
+      clients?: ClienteVencido[];
+      total?: number;
+      page?: number;
+      limit?: number;
+      totalPages?: number;
+    };
     return {
       ok: true,
-      clients: (data as { clients?: ClienteVencido[] }).clients || [],
-      total: (data as { total?: number }).total ?? 0,
+      clients: d.clients || [],
+      total: d.total ?? 0,
+      page: d.page ?? 1,
+      limit: d.limit ?? 0,
+      totalPages: d.totalPages ?? 1,
     };
   } catch (e) {
     return {
