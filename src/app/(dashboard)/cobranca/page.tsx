@@ -337,6 +337,11 @@ export default function CobrancaPage() {
                         </td>
                         <td className="px-4 py-3 font-medium text-red-600">
                           {formatCurrency(c.value)}
+                          {c.chargesCount && c.chargesCount > 1 && (
+                            <div className="text-xs font-normal text-gray-500">
+                              {c.chargesCount} cobranças
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{formatDate(c.dueDate)}</td>
                         <td className="px-4 py-3">

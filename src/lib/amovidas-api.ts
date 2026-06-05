@@ -33,6 +33,7 @@ export interface ClienteVencido {
   status?: string | null;
   lastNote?: string | null;
   lastContactAt?: string | null;
+  chargesCount?: number;
 }
 
 export interface CobrancaFiltros {
