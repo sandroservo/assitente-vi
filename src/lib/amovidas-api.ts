@@ -169,20 +169,23 @@ export async function salvarObservacaoCobranca(payload: {
   }
 }
 
-/** Dispara mensagem padrão de cobrança no WhatsApp do cliente (via sistema). */
+/** Dispara mensagem de cobrança no WhatsApp do cliente (via sistema). */
 export async function enviarCobranca(payload: {
   userId?: number | null;
   asaasCustomerId?: string | null;
+  message?: string;
 }): Promise<{ ok: boolean; message?: string; error?: string }> {
   if (!TOKEN) return { ok: false, error: "AMOVIDAS_AGENT_TOKEN não configurado" };
   try {
+    const body: Record<string, unknown> = {
+      user_id: payload.userId ?? null,
+      asaas_customer_id: payload.asaasCustomerId ?? null,
+    };
+    if (payload.message) body.message = payload.message;
     const res = await fetch(`${BASE}/api/agent/cobranca/send`, {
       method: "POST",
       headers: headers(),
-      body: JSON.stringify({
-        user_id: payload.userId ?? null,
-        asaas_customer_id: payload.asaasCustomerId ?? null,
-      }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -195,6 +198,36 @@ export async function enviarCobranca(payload: {
       };
     }
     return { ok: true, message: (data as { message?: string }).message };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export interface ReminderTemplate {
+  id: number;
+  name: string;
+  situation: string;
+  body: string;
+}
+
+/** Busca modelos de lembrete ativos por situação. */
+export async function fetchReminderTemplates(situation?: string): Promise<{
+  ok: boolean;
+  templates?: ReminderTemplate[];
+  error?: string;
+}> {
+  if (!TOKEN) return { ok: false, error: "AMOVIDAS_AGENT_TOKEN não configurado" };
+  try {
+    const params = new URLSearchParams();
+    if (situation) params.set("situation", situation);
+    const res = await fetch(`${BASE}/api/agent/reminder-templates?${params}`, {
+      headers: headers(),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: (data as { error?: string }).error || `HTTP ${res.status}` };
+    }
+    return { ok: true, templates: (data as { templates?: ReminderTemplate[] }).templates || [] };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }

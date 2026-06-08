@@ -20,6 +20,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { ClienteVencido, ObservacaoCobranca } from "@/lib/amovidas-api";
+import SendReminderModal from "@/components/SendReminderModal";
 
 const STATUS_LABELS: Record<string, string> = {
   pendente: "Pendente",
@@ -66,6 +67,9 @@ export default function CobrancaPage() {
 
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  // Modal de lembrete por situação
+  const [reminderClient, setReminderClient] = useState<ClienteVencido | null>(null);
 
   // Modal de observações
   const [noteClient, setNoteClient] = useState<ClienteVencido | null>(null);
@@ -147,26 +151,12 @@ export default function CobrancaPage() {
     }
   };
 
-  const cobrar = async (c: ClienteVencido) => {
+  const cobrar = (c: ClienteVencido) => {
     if (!c.phone) {
       notify("err", "Cliente sem telefone");
       return;
     }
-    setBusyKey(`send-${clientKey(c)}`);
-    try {
-      const res = await fetch("/api/cobranca/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: c.userId, asaasCustomerId: c.asaasCustomerId }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || "Erro ao enviar cobrança");
-      notify("ok", data.message || "Cobrança enviada");
-    } catch (e) {
-      notify("err", e instanceof Error ? e.message : "Erro ao enviar cobrança");
-    } finally {
-      setBusyKey(null);
-    }
+    setReminderClient(c);
   };
 
   const openNotes = async (c: ClienteVencido) => {
@@ -399,9 +389,9 @@ export default function CobrancaPage() {
                             </button>
                             <button
                               onClick={() => cobrar(c)}
-                              disabled={!c.phone || busyKey === `send-${k}`}
+                              disabled={!c.phone}
                               className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200 disabled:opacity-40"
-                              title="Enviar mensagem de cobrança"
+                              title="Enviar lembrete de cobrança"
                             >
                               <Send className="w-3.5 h-3.5" />
                               Cobrar
@@ -449,6 +439,18 @@ export default function CobrancaPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de lembrete por situação */}
+      {reminderClient && (
+        <SendReminderModal
+          client={reminderClient}
+          onClose={() => setReminderClient(null)}
+          onSent={() => {
+            setReminderClient(null);
+            notify("ok", "Lembrete enviado via WhatsApp!");
+          }}
+        />
+      )}
 
       {/* Toast */}
       {feedback && (

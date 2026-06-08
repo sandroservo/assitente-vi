@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const { userId, asaasCustomerId } = body;
+  const { userId, asaasCustomerId, message } = body;
 
   if (!userId && !asaasCustomerId) {
     return NextResponse.json(
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
   const result = await enviarCobranca({
     userId: userId ?? null,
     asaasCustomerId: asaasCustomerId ?? null,
+    message: typeof message === "string" && message.trim() ? message.trim() : undefined,
   });
 
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });
