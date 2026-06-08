@@ -23,6 +23,7 @@ import {
   Reply,
   Pencil,
   Contact,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EmojiPicker from "@/components/chat/EmojiPicker";
@@ -49,6 +50,8 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showCardsGallery, setShowCardsGallery] = useState(false);
   const [sendingCard, setSendingCard] = useState(false);
+  const [showEmoticonsGallery, setShowEmoticonsGallery] = useState(false);
+  const [sendingEmoticon, setSendingEmoticon] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ReplyMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ReplyMessage | null>(null);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -311,6 +314,43 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
       onToast?.("Erro ao enviar áudio", "error");
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Emoticons oficiais Amo Vidas em public/emoticons/
+  const availableEmoticons = [
+    "7.png", "8.png", "11.png", "13.png", "15.png", "16.png",
+    "17.png", "18.png", "20.png", "21.png", "22.png", "23.png",
+    "Indiquei_-_Ganhei.png",
+  ];
+
+  async function sendEmoticon(file: string) {
+    setSendingEmoticon(true);
+    setShowEmoticonsGallery(false);
+    try {
+      const response = await fetch(`/emoticons/${file}`);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      const res = await fetch("/api/messages/send-media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, base64, mimeType: "image/png", fileName: file }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        onToast?.(data.error || "Erro ao enviar emoticon", "error");
+        return;
+      }
+      triggerRefetch();
+    } catch {
+      onToast?.("Erro ao enviar emoticon", "error");
+    } finally {
+      setSendingEmoticon(false);
     }
   }
 
@@ -658,6 +698,41 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
         </div>
       )}
 
+      {/* Emoticons Gallery */}
+      {showEmoticonsGallery && (
+        <div className="px-4 pt-3 pb-1">
+          <div className="bg-gray-50 rounded-xl border p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Emoticons Amo Vidas</h4>
+              <button
+                onClick={() => setShowEmoticonsGallery(false)}
+                className="p-1 rounded-md hover:bg-gray-200 transition-colors"
+                aria-label="Fechar emoticons"
+              >
+                <X className="h-3.5 w-3.5 text-gray-400" />
+              </button>
+            </div>
+            <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
+              {availableEmoticons.map((file) => (
+                <button
+                  key={file}
+                  onClick={() => sendEmoticon(file)}
+                  disabled={sendingEmoticon}
+                  className="rounded-lg overflow-hidden border hover:border-pink-400 transition-all hover:shadow-md disabled:opacity-50 bg-white"
+                  title={file.replace(/_/g, " ").replace(".png", "")}
+                >
+                  <img
+                    src={`/emoticons/${file}`}
+                    alt={file.replace(/_/g, " ").replace(".png", "")}
+                    className="w-full h-14 object-contain p-1"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Input file oculto */}
       <input
         ref={fileInputRef}
@@ -732,6 +807,25 @@ export default function ChatComposer({ conversationId, onToast }: ChatComposerPr
                 <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
               ) : (
                 <LayoutGrid className="h-5 w-5 text-purple-500" />
+              )}
+            </Button>
+            {/* Emoticons Amo Vidas */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-9 w-9 rounded-full",
+                showEmoticonsGallery ? "bg-pink-50 text-pink-500" : "hover:bg-pink-50 text-pink-400"
+              )}
+              onClick={() => setShowEmoticonsGallery((prev) => !prev)}
+              disabled={sendingEmoticon}
+              title="Emoticons Amo Vidas"
+              aria-label="Emoticons Amo Vidas"
+            >
+              {sendingEmoticon ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Sparkles className="h-5 w-5" />
               )}
             </Button>
           </div>
