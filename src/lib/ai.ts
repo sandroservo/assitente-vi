@@ -492,7 +492,7 @@ function generateFallbackResponse(text: string, leadName?: string | null): strin
   }
 
   if (t.includes("plano") || t.includes("valor") || t.includes("preço")) {
-    return `${greeting ? greeting + ", t" : "T"}emos 3 planos: Essencial (R$ 37,90), Completo (R$ 59,90) e Premium (R$ 99,90). O foco é cuidado de rotina ou exames mais específicos?`;
+    return `${greeting ? greeting + ", t" : "T"}emos 3 planos: Plano Rotina (R$ 37,90), Plano Especializado (R$ 57,90) e Cobertura Total (R$ 97,00). O foco é cuidado de rotina ou exames mais específicos?`;
   }
 
   if (t.includes("amo vidas") || t.includes("o que é")) {
