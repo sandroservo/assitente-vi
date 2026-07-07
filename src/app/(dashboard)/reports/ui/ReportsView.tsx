@@ -15,16 +15,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Users, 
-  MessageSquare, 
-  CheckCircle2, 
+import {
+  Users,
+  MessageSquare,
+  CheckCircle2,
   Clock,
   TrendingUp,
   UserCheck,
   MessageCircle,
-  Headphones
+  Headphones,
+  Layers,
+  MessageSquareOff,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface UserStat {
@@ -39,10 +42,17 @@ interface UserStat {
   avgResponseTimeSec: number;
   leadsQualified: number;
   leadsClosed: number;
+  activeConversations: number;
 }
 
 interface LeadByStatus {
   status: string;
+  count: number;
+}
+
+interface SectorDist {
+  name: string;
+  color: string;
   count: number;
 }
 
@@ -53,11 +63,15 @@ interface Stats {
   messagesOut: number;
   totalHandoffs: number;
   completedHandoffs: number;
+  conversationsOpen: number;
+  conversationsClosed: number;
+  sectorsDistribution: SectorDist[];
 }
 
 interface ReportsViewProps {
   userStats: UserStat[];
   stats: Stats;
+  days: number;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -80,13 +94,99 @@ const STATUS_COLORS: Record<string, string> = {
   HUMANO_SOLICITADO: "bg-yellow-100 text-yellow-700",
 };
 
-export function ReportsView({ userStats, stats }: ReportsViewProps) {
+export function ReportsView({ userStats, stats, days }: ReportsViewProps) {
+  const router = useRouter();
+  const totalConv = stats.conversationsOpen + stats.conversationsClosed;
+  const closeRate = totalConv > 0 ? Math.round((stats.conversationsClosed / totalConv) * 100) : 0;
+  const maxSector = Math.max(1, ...stats.sectorsDistribution.map((s) => s.count));
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Relatórios</h1>
-        <p className="text-gray-500">Visão geral dos atendimentos (últimos 30 dias)</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Relatórios</h1>
+          <p className="text-gray-500">Visão geral dos atendimentos (últimos {days} dias)</p>
+        </div>
+        {/* Seletor de período */}
+        <div className="flex gap-1.5">
+          {[7, 30, 90].map((d) => (
+            <button
+              key={d}
+              onClick={() => router.push(`/reports?dias=${d}`)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                days === d ? "bg-[#FE3E6E] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              )}
+            >
+              {d} dias
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Cards de conversas: abertas / encerradas / taxa */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+              <MessageCircle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Conversas Abertas</p>
+              <p className="text-2xl font-bold text-gray-800">{stats.conversationsOpen}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
+              <MessageSquareOff className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Conversas Encerradas</p>
+              <p className="text-2xl font-bold text-gray-800">{stats.conversationsClosed}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Taxa de Encerramento</p>
+              <p className="text-2xl font-bold text-gray-800">{closeRate}%</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Conversas por setor */}
+      {stats.sectorsDistribution.length > 0 && (
+        <Card className="p-5">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Layers className="w-5 h-5 text-[#FE3E6E]" />
+            Conversas por Setor
+          </h2>
+          <div className="space-y-3">
+            {stats.sectorsDistribution.map((s) => (
+              <div key={s.name} className="flex items-center gap-3">
+                <span className="flex items-center gap-2 w-32 shrink-0 text-sm text-gray-700">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                  <span className="truncate">{s.name}</span>
+                </span>
+                <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${(s.count / maxSector) * 100}%`, backgroundColor: s.color }}
+                  />
+                </div>
+                <span className="text-sm font-bold text-gray-700 min-w-[32px] text-right">{s.count}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Cards de métricas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -216,6 +316,11 @@ export function ReportsView({ userStats, stats }: ReportsViewProps) {
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
                           {roleLabel}
                         </Badge>
+                        {user.activeConversations > 0 && (
+                          <Badge className="text-[10px] px-1.5 py-0 shrink-0 bg-emerald-100 text-emerald-700">
+                            {user.activeConversations} ativa{user.activeConversations !== 1 ? "s" : ""}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -10,12 +10,19 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { ReportsView } from "./ui/ReportsView";
 
-export default async function ReportsPage() {
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dias?: string }>;
+}) {
   const session = await auth();
-  
+
   if (!session?.user) {
     redirect("/login");
   }
+
+  const { dias } = await searchParams;
+  const days = [7, 30, 90].includes(Number(dias)) ? Number(dias) : 30;
 
   // Busca usuários da organização
   const users = await prisma.user.findMany({
@@ -31,9 +38,9 @@ export default async function ReportsPage() {
     },
   });
 
-  // Busca estatísticas de atendimentos por usuário (últimos 30 dias)
+  // Janela do período selecionado
   const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - days);
 
   const handoffs = await prisma.handoff.findMany({
     where: {
@@ -116,6 +123,37 @@ export default async function ReportsPage() {
     GROUP BY h."assignedToId"
   `;
 
+  // Conversas: abertas x encerradas (snapshot atual da org)
+  const orgLeadFilter = { lead: { organizationId: session.user.organizationId } };
+  const [conversationsOpen, conversationsClosed] = await Promise.all([
+    prisma.conversation.count({ where: { ...orgLeadFilter, status: "open" } }),
+    prisma.conversation.count({ where: { ...orgLeadFilter, status: "closed" } }),
+  ]);
+
+  // Distribuição de conversas por setor
+  const sectors = await prisma.sector.findMany({
+    where: { organizationId: session.user.organizationId },
+    select: { id: true, name: true, color: true },
+  });
+  const bySector = await prisma.conversation.groupBy({
+    by: ["sectorId"],
+    where: { ...orgLeadFilter, sectorId: { not: null } },
+    _count: true,
+  });
+  const sectorCountMap = new Map(bySector.map((s) => [s.sectorId, s._count]));
+  const sectorsDistribution = sectors
+    .map((s) => ({ name: s.name, color: s.color, count: sectorCountMap.get(s.id) || 0 }))
+    .filter((s) => s.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  // Conversas ativas (abertas) atribuídas por atendente
+  const activeByUser = await prisma.conversation.groupBy({
+    by: ["assignedUserId"],
+    where: { ...orgLeadFilter, status: "open", assignedUserId: { not: null } },
+    _count: true,
+  });
+  const activeMap = new Map(activeByUser.map((a) => [a.assignedUserId, a._count]));
+
   // Calcula estatísticas por usuário
   const msgMap = new Map(messagesByUser.map(m => [m.sentByUserId, m._count]));
   const respTimeMap = new Map(avgResponseTimes.map(r => [r.user_id, Math.round(r.avg_seconds)]));
@@ -135,6 +173,7 @@ export default async function ReportsPage() {
       avgResponseTimeSec: respTimeMap.get(user.id) || 0,
       leadsQualified: conv.qualified,
       leadsClosed: conv.closed,
+      activeConversations: activeMap.get(user.id) || 0,
     };
   });
 
@@ -148,13 +187,17 @@ export default async function ReportsPage() {
     messagesOut: messages.find((m: typeof messages[number]) => m.direction === "out")?._count || 0,
     totalHandoffs: handoffs.length,
     completedHandoffs: handoffs.filter((h: typeof handoffs[number]) => h.status === "closed").length,
+    conversationsOpen,
+    conversationsClosed,
+    sectorsDistribution,
   };
 
   return (
     <div className="p-4 pt-14 md:p-6 md:pt-6">
-      <ReportsView 
+      <ReportsView
         userStats={userStats}
         stats={stats}
+        days={days}
       />
     </div>
   );
