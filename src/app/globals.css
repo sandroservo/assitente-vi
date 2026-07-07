@@ -181,3 +181,62 @@ body {
 .scrollbar-hide::-webkit-scrollbar-thumb {
   display: none !important;
 }
+
+/* ==========================================================================
+   Dark mode — ponytail: reskin via remap das utilities hardcoded mais comuns,
+   ativado por [data-theme=dark] no <html>. Evita migrar dezenas de componentes
+   p/ variantes dark:. Teto: se brigar com casos novos, migrar p/ dark: pontual.
+   ========================================================================== */
+[data-theme="dark"] {
+  --background: #0f0f1a;
+  --foreground: #e5e7eb;
+  --card: #1a1a2e;
+  --card-foreground: #e5e7eb;
+  --popover: #1a1a2e;
+  --popover-foreground: #e5e7eb;
+  --secondary: #1f1f38;
+  --secondary-foreground: #e5e7eb;
+  --muted: #1f1f38;
+  --muted-foreground: #9ca3af;
+  --accent: #2a1a24;
+  --accent-foreground: #FE3E6E;
+  --border: #2d2d44;
+  --input: #2d2d44;
+}
+
+/* Superfícies claras → escuras */
+[data-theme="dark"] .bg-white { background-color: #1a1a2e; }
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-gray-50\/80,
+[data-theme="dark"] .bg-gray-50\/50 { background-color: #16162a; }
+[data-theme="dark"] .bg-gray-100 { background-color: #22223c; }
+[data-theme="dark"] .bg-gray-200 { background-color: #2d2d44; }
+[data-theme="dark"] .premium-card,
+[data-theme="dark"] .premium-input,
+[data-theme="dark"] .sidebar-gradient { background-color: #1a1a2e; }
+[data-theme="dark"] .glass-effect { background: rgba(26, 26, 46, 0.8); }
+
+/* Textos cinza → claros */
+[data-theme="dark"] .text-gray-900,
+[data-theme="dark"] .text-gray-800 { color: #e5e7eb; }
+[data-theme="dark"] .text-gray-700 { color: #d1d5db; }
+[data-theme="dark"] .text-gray-600 { color: #c4c4d0; }
+[data-theme="dark"] .text-gray-500 { color: #9ca3af; }
+[data-theme="dark"] .text-gray-400 { color: #7a7a8c; }
+
+/* Bordas */
+[data-theme="dark"] .border-gray-50,
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-gray-200,
+[data-theme="dark"] .border { border-color: #2d2d44; }
+
+/* Hover states comuns */
+[data-theme="dark"] .hover\:bg-gray-50:hover { background-color: #22223c; }
+[data-theme="dark"] .hover\:bg-gray-100:hover { background-color: #2d2d44; }
+[data-theme="dark"] .hover\:bg-gray-200:hover { background-color: #38385a; }
+
+/* Inputs */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea { color: #e5e7eb; }
+[data-theme="dark"] ::placeholder { color: #6b7280; }

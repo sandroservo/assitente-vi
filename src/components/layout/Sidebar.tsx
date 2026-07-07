@@ -11,6 +11,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -148,6 +149,10 @@ export function Sidebar() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="px-3 pb-1">
+        <ThemeToggle collapsed={collapsed && !isMobile} />
       </div>
 
       <div className="px-3 pb-4">
