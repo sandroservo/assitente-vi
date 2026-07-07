@@ -30,9 +30,13 @@ export async function GET() {
     for (const c of convos) {
       if (!byLeadId.has(c.leadId)) byLeadId.set(c.leadId, c);
     }
-    const uniqueConvos = Array.from(byLeadId.values()).sort(
-      (a, b) => (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0)
-    );
+    // Fixadas primeiro, depois por data.
+    const uniqueConvos = Array.from(byLeadId.values()).sort((a, b) => {
+      const pa = (a as any).isPinned ? 1 : 0;
+      const pb = (b as any).isPinned ? 1 : 0;
+      if (pa !== pb) return pb - pa;
+      return (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0);
+    });
 
     const conversations = uniqueConvos.map((c: (typeof uniqueConvos)[number]) => {
       const lastMsg = (c as any).messages?.[0] ?? null;
@@ -44,6 +48,8 @@ export async function GET() {
         avatarUrl: c.lead.avatarUrl,
         phone: c.lead.phone,
         status: c.lead.status,
+        convStatus: (c as any).status ?? "open", // atendimento: open | closed
+        isPinned: (c as any).isPinned ?? false,
         ownerType: c.lead.ownerType,
         leadScore: (c.lead as any).leadScore ?? 0,
         unreadCount: c.unreadCount,

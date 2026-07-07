@@ -99,6 +99,9 @@ export async function POST(req: Request) {
       data: { lastMessageAt: new Date() },
     });
 
+    const { emitConversationUpdate } = await import("@/lib/realtime");
+    emitConversationUpdate({ type: "message", conversationId, leadId: convo.leadId });
+
     return NextResponse.json({ ok: true, message: msg });
   } catch (error) {
     console.error("Send message error:", error);

@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Bot, UserCheck, MessageSquare, Mic, Image as ImageIcon, X, MessageCircle } from "lucide-react";
+import { Search, Bot, UserCheck, MessageSquare, X, MessageCircle, Pin, PinOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LeadAvatar } from "@/components/LeadAvatar";
 
@@ -21,6 +21,8 @@ interface Conversation {
   avatarUrl: string | null;
   phone: string;
   status: string;
+  convStatus?: string; // atendimento: open | closed
+  isPinned?: boolean;
   ownerType: string;
   leadScore: number;
   unreadCount: number;
@@ -29,6 +31,8 @@ interface Conversation {
   lastMessageType: string;
   lastMessageDirection: string;
 }
+
+type FilterTab = "abertas" | "nao-lidas" | "encerradas" | "todas";
 
 interface ConversationSidebarProps {
   initialConversations: Conversation[];
@@ -126,6 +130,7 @@ export default function ConversationSidebar({
 }: ConversationSidebarProps) {
   const [conversations, setConversations] = useState(initialConversations);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<FilterTab>("abertas");
   const pathname = usePathname();
   const router = useRouter();
   const prevUnreadMapRef = useRef<Map<string, number>>(new Map());
@@ -214,10 +219,41 @@ export default function ConversationSidebar({
     }
   }, [activeId, fireNotification]);
 
+  // Realtime via SSE (mensagem nova/encerrar/pin aparecem na hora).
+  // Polling como fallback (intervalo maior) caso o SSE caia.
   useEffect(() => {
-    const interval = setInterval(fetchConversations, 5000);
-    return () => clearInterval(interval);
+    let es: EventSource | null = null;
+    let debounce: NodeJS.Timeout | null = null;
+    const refresh = () => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(fetchConversations, 250);
+    };
+    try {
+      es = new EventSource("/api/conversations/stream");
+      es.onmessage = () => refresh();
+      es.onerror = () => { /* mantém polling */ };
+    } catch { /* sem SSE, usa polling */ }
+
+    const interval = setInterval(fetchConversations, 15000);
+    return () => {
+      if (debounce) clearTimeout(debounce);
+      clearInterval(interval);
+      es?.close();
+    };
   }, [fetchConversations]);
+
+  // Fixar / desafixar conversa.
+  const togglePin = useCallback(async (conv: Conversation) => {
+    const next = !conv.isPinned;
+    setConversations((prev) => prev.map((c) => (c.id === conv.id ? { ...c, isPinned: next } : c)));
+    try {
+      await fetch(`/api/conversations/${conv.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPinned: next }),
+      });
+    } catch { /* rollback via próximo fetch */ }
+  }, []);
 
   // Atualiza título da aba com contagem de não lidas
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
@@ -228,8 +264,13 @@ export default function ConversationSidebar({
     return () => { document.title = "Vi Assistente"; };
   }, [totalUnread]);
 
-  // Filtra conversas pela busca
+  const isClosed = (c: Conversation) => c.convStatus === "closed";
+
+  // Filtra por aba + busca
   const filtered = conversations.filter((c) => {
+    if (tab === "abertas" && isClosed(c)) return false;
+    if (tab === "encerradas" && !isClosed(c)) return false;
+    if (tab === "nao-lidas" && (c.unreadCount === 0 || isClosed(c))) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -239,8 +280,9 @@ export default function ConversationSidebar({
     );
   });
 
-  // Ordena: não-lidas primeiro, depois por data
+  // Ordena: fixadas primeiro, depois não-lidas, depois por data
   const sorted = [...filtered].sort((a, b) => {
+    if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
     if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
     if (b.unreadCount > 0 && a.unreadCount === 0) return 1;
     return (
@@ -248,6 +290,19 @@ export default function ConversationSidebar({
       new Date(a.lastMessageAt ?? 0).getTime()
     );
   });
+
+  const counts = {
+    abertas: conversations.filter((c) => !isClosed(c)).length,
+    naoLidas: conversations.filter((c) => c.unreadCount > 0 && !isClosed(c)).length,
+    encerradas: conversations.filter(isClosed).length,
+    todas: conversations.length,
+  };
+  const TABS: { key: FilterTab; label: string; count: number }[] = [
+    { key: "abertas", label: "Abertas", count: counts.abertas },
+    { key: "nao-lidas", label: "Não lidas", count: counts.naoLidas },
+    { key: "encerradas", label: "Encerradas", count: counts.encerradas },
+    { key: "todas", label: "Todas", count: counts.todas },
+  ];
 
   return (
     <>
@@ -276,6 +331,21 @@ export default function ConversationSidebar({
             aria-label="Buscar conversa por nome ou telefone"
           />
         </div>
+        {/* Filtros */}
+        <div className="flex gap-1.5 mt-2 overflow-x-auto">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                tab === t.key ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              )}
+            >
+              {t.label}{t.count > 0 ? ` ${t.count}` : ""}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Conversation list */}
@@ -298,8 +368,9 @@ export default function ConversationSidebar({
               key={conv.id}
               onClick={() => router.push(`/chats/${conv.id}`)}
               className={cn(
-                "w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-gray-50 hover:bg-gray-50",
-                isActive && "bg-pink-50/80 hover:bg-pink-50/80 border-l-2 border-l-pink-500"
+                "group w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-gray-50 hover:bg-gray-50",
+                isActive && "bg-pink-50/80 hover:bg-pink-50/80 border-l-2 border-l-pink-500",
+                isClosed(conv) && "opacity-60"
               )}
               aria-label={`Conversa com ${displayName}`}
               aria-current={isActive ? "page" : undefined}
@@ -333,16 +404,33 @@ export default function ConversationSidebar({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className={cn(
-                    "text-sm truncate",
+                    "text-sm truncate flex items-center gap-1",
                     conv.unreadCount > 0 ? "font-bold text-gray-900" : "font-medium text-gray-800"
                   )}>
-                    {displayName}
+                    {conv.isPinned && <Pin className="h-3 w-3 text-pink-500 shrink-0 fill-pink-500" />}
+                    {isClosed(conv) && <span className="text-[9px] px-1 rounded bg-gray-200 text-gray-500 shrink-0">encerrada</span>}
+                    <span className="truncate">{displayName}</span>
                   </span>
-                  <span className={cn(
-                    "text-[11px] flex-shrink-0 ml-2",
-                    conv.unreadCount > 0 ? "text-pink-600 font-semibold" : "text-gray-400"
-                  )}>
-                    {formatTime(conv.lastMessageAt)}
+                  <span className="flex items-center gap-1 flex-shrink-0 ml-2">
+                    {/* Pin toggle (span pra não aninhar button) */}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); togglePin(conv); }}
+                      className={cn(
+                        "p-0.5 rounded hover:bg-gray-200 text-gray-400",
+                        conv.isPinned ? "opacity-100 text-pink-500" : "opacity-0 group-hover:opacity-100"
+                      )}
+                      title={conv.isPinned ? "Desafixar" : "Fixar"}
+                    >
+                      {conv.isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                    </span>
+                    <span className={cn(
+                      "text-[11px]",
+                      conv.unreadCount > 0 ? "text-pink-600 font-semibold" : "text-gray-400"
+                    )}>
+                      {formatTime(conv.lastMessageAt)}
+                    </span>
                   </span>
                 </div>
 

@@ -221,6 +221,8 @@ model Conversation {
   remoteJid     String
   lastMessageAt DateTime?
   unreadCount   Int       @default(0)
+  status        String    @default("open") // open | closed (atendimento encerrado)
+  isPinned      Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -233,6 +235,7 @@ model Conversation {
   @@unique([instanceId, remoteJid]) // remoteJid único por instância
   @@index([leadId])
   @@index([instanceId])
+  @@index([status])
 }
 
 model Message {

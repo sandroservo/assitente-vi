@@ -77,6 +77,7 @@ export default async function ChatDetailPage({
   return (
     <ChatPageClient
       conversationId={convo.id}
+      convStatus={(convo as { status?: string }).status ?? "open"}
       lead={lead}
       initialMessages={messages}
     />

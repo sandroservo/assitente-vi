@@ -48,6 +48,8 @@ export default async function ChatsLayout({
       avatarUrl: c.lead.avatarUrl,
       phone: c.lead.phone,
       status: c.lead.status as string,
+      convStatus: (c as any).status ?? "open",
+      isPinned: (c as any).isPinned ?? false,
       ownerType: c.lead.ownerType as string,
       leadScore: (c.lead as any).leadScore ?? 0,
       unreadCount: c.unreadCount,

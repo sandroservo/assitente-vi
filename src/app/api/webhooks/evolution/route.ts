@@ -223,6 +223,10 @@ export async function POST(req: Request) {
       },
     });
 
+    // Realtime: notifica o painel (SSE) da nova mensagem.
+    const { emitConversationUpdate } = await import("@/lib/realtime");
+    emitConversationUpdate({ type: "message", conversationId: conversation.id, leadId: conversation.leadId });
+
     // Mensagem enviada pelo atendente (fromMe): humano assumiu a conversa — bot não responde até "Devolver ao Bot"
     if (fromMe) {
       const wasBot = lead.ownerType === "bot";

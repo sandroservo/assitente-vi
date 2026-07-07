@@ -62,6 +62,7 @@ interface Lead {
 
 interface ChatPageClientProps {
   conversationId: string;
+  convStatus?: string; // open | closed
   lead: Lead;
   initialMessages: Array<{
     id: string;
@@ -130,6 +131,7 @@ function getStatusBadge(status: string, ownerType: string) {
 
 export default function ChatPageClient({
   conversationId,
+  convStatus = "open",
   lead: initialLead,
   initialMessages,
 }: ChatPageClientProps) {
@@ -138,6 +140,23 @@ export default function ChatPageClient({
   const [lead, setLead] = useState(initialLead);
   const [handoffLoading, setHandoffLoading] = useState(false);
   const [parouResponderLoading, setParouResponderLoading] = useState(false);
+  const [closed, setClosed] = useState(convStatus === "closed");
+  const [closingLoading, setClosingLoading] = useState(false);
+
+  const handleToggleClose = async () => {
+    const next = !closed;
+    setClosingLoading(true);
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next ? "closed" : "open" }),
+      });
+      if (res.ok) setClosed(next);
+    } catch { /* ignore */ } finally {
+      setClosingLoading(false);
+    }
+  };
 
   // Presença online do cliente
   const [clientOnline, setClientOnline] = useState(false);
@@ -448,6 +467,21 @@ export default function ChatPageClient({
               title="Marcar como parou de responder"
             >
               <span className="flex items-center gap-1">⏳<span className="hidden sm:inline"> Parou responder</span></span>
+            </button>
+            <button
+              onClick={handleToggleClose}
+              disabled={closingLoading}
+              className={cn(
+                "px-2 md:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50",
+                closed
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              )}
+              title={closed ? "Reabrir atendimento" : "Encerrar atendimento"}
+            >
+              {closed
+                ? <span className="flex items-center gap-1">↻<span className="hidden sm:inline"> Reabrir</span></span>
+                : <span className="flex items-center gap-1">✓<span className="hidden sm:inline"> Encerrar</span></span>}
             </button>
             <button
               onClick={() => setSidebarOpen((prev) => !prev)}
