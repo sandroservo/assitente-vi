@@ -78,6 +78,8 @@ export default async function ChatDetailPage({
     <ChatPageClient
       conversationId={convo.id}
       convStatus={(convo as { status?: string }).status ?? "open"}
+      sectorId={(convo as { sectorId?: string | null }).sectorId ?? null}
+      assignedUserId={(convo as { assignedUserId?: string | null }).assignedUserId ?? null}
       lead={lead}
       initialMessages={messages}
     />

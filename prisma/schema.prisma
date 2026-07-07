@@ -223,6 +223,8 @@ model Conversation {
   unreadCount   Int       @default(0)
   status        String    @default("open") // open | closed (atendimento encerrado)
   isPinned      Boolean   @default(false)
+  sectorId       String?  // fila/setor (Sector.id) — coluna plana, sem FK
+  assignedUserId String?  // atendente designado (User.id) — coluna plana, sem FK
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -236,6 +238,20 @@ model Conversation {
   @@index([leadId])
   @@index([instanceId])
   @@index([status])
+  @@index([sectorId])
+  @@index([assignedUserId])
+}
+
+// Setor/fila de atendimento (Vendas, Suporte, Financeiro...). Standalone, sem relations.
+model Sector {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  color          String   @default("#FE3E6E")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
 }
 
 model Message {

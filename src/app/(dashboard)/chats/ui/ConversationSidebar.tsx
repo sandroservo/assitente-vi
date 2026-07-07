@@ -23,6 +23,11 @@ interface Conversation {
   status: string;
   convStatus?: string; // atendimento: open | closed
   isPinned?: boolean;
+  sectorId?: string | null;
+  sectorName?: string | null;
+  sectorColor?: string | null;
+  assignedUserId?: string | null;
+  assignedUserName?: string | null;
   ownerType: string;
   leadScore: number;
   unreadCount: number;
@@ -33,9 +38,12 @@ interface Conversation {
 }
 
 type FilterTab = "abertas" | "nao-lidas" | "encerradas" | "todas";
+interface Sector { id: string; name: string; color: string; }
 
 interface ConversationSidebarProps {
   initialConversations: Conversation[];
+  currentUserId?: string | null;
+  sectors?: Sector[];
 }
 
 function getInitials(name: string | null, phone: string): string {
@@ -127,10 +135,14 @@ function playNotificationSound() {
 
 export default function ConversationSidebar({
   initialConversations,
+  currentUserId = null,
+  sectors = [],
 }: ConversationSidebarProps) {
   const [conversations, setConversations] = useState(initialConversations);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<FilterTab>("abertas");
+  const [sectorFilter, setSectorFilter] = useState<string>("todos"); // todos | <sectorId>
+  const [onlyMine, setOnlyMine] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const prevUnreadMapRef = useRef<Map<string, number>>(new Map());
@@ -271,6 +283,8 @@ export default function ConversationSidebar({
     if (tab === "abertas" && isClosed(c)) return false;
     if (tab === "encerradas" && !isClosed(c)) return false;
     if (tab === "nao-lidas" && (c.unreadCount === 0 || isClosed(c))) return false;
+    if (sectorFilter !== "todos" && c.sectorId !== sectorFilter) return false;
+    if (onlyMine && c.assignedUserId !== currentUserId) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -346,6 +360,35 @@ export default function ConversationSidebar({
             </button>
           ))}
         </div>
+        {/* Filtro por setor + minhas conversas */}
+        {(sectors.length > 0 || currentUserId) && (
+          <div className="flex gap-1.5 mt-2 items-center">
+            {sectors.length > 0 && (
+              <select
+                value={sectorFilter}
+                onChange={(e) => setSectorFilter(e.target.value)}
+                className="flex-1 min-w-0 px-2 py-1 text-xs border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
+                aria-label="Filtrar por setor"
+              >
+                <option value="todos">Todos os setores</option>
+                {sectors.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            )}
+            {currentUserId && (
+              <button
+                onClick={() => setOnlyMine((v) => !v)}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                  onlyMine ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                )}
+              >
+                Minhas
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Conversation list */}
@@ -443,6 +486,25 @@ export default function ConversationSidebar({
                   </p>
 
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Setor */}
+                    {conv.sectorName && (
+                      <span
+                        className="flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full text-gray-600 bg-gray-100"
+                        title={`Setor: ${conv.sectorName}`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: conv.sectorColor || "#999" }} />
+                        {conv.sectorName}
+                      </span>
+                    )}
+                    {/* Atendente designado */}
+                    {conv.assignedUserName && (
+                      <span
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700"
+                        title={`Atendente: ${conv.assignedUserName}`}
+                      >
+                        {getInitials(conv.assignedUserName, "")}
+                      </span>
+                    )}
                     {/* Lead Score mini badge */}
                     {conv.leadScore > 0 && (
                       <span

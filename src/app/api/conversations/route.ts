@@ -25,6 +25,14 @@ export async function GET() {
       take: 200,
     });
 
+    // Mapas p/ resolver nome de setor + atendente (tabelas pequenas).
+    const [sectors, users] = await Promise.all([
+      prisma.sector.findMany({ select: { id: true, name: true, color: true } }),
+      prisma.user.findMany({ select: { id: true, name: true } }),
+    ]);
+    const sectorMap = new Map(sectors.map((s) => [s.id, s]));
+    const userMap = new Map(users.map((u) => [u.id, u.name]));
+
     // Uma conversa por lead (evita duplicata)
     const byLeadId = new Map<string, (typeof convos)[number]>();
     for (const c of convos) {
@@ -40,6 +48,7 @@ export async function GET() {
 
     const conversations = uniqueConvos.map((c: (typeof uniqueConvos)[number]) => {
       const lastMsg = (c as any).messages?.[0] ?? null;
+      const sec = (c as any).sectorId ? sectorMap.get((c as any).sectorId) : null;
       return {
         id: c.id,
         leadId: c.leadId,
@@ -50,6 +59,11 @@ export async function GET() {
         status: c.lead.status,
         convStatus: (c as any).status ?? "open", // atendimento: open | closed
         isPinned: (c as any).isPinned ?? false,
+        sectorId: (c as any).sectorId ?? null,
+        sectorName: sec?.name ?? null,
+        sectorColor: sec?.color ?? null,
+        assignedUserId: (c as any).assignedUserId ?? null,
+        assignedUserName: (c as any).assignedUserId ? userMap.get((c as any).assignedUserId) ?? null : null,
         ownerType: c.lead.ownerType,
         leadScore: (c.lead as any).leadScore ?? 0,
         unreadCount: c.unreadCount,

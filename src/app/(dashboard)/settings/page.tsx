@@ -5,6 +5,7 @@
 
 import { getSystemSettings } from "@/lib/settings";
 import { SettingsForm } from "./ui/SettingsForm";
+import { SectorsCard } from "./ui/SectorsCard";
 import fs from "fs";
 import path from "path";
 
@@ -42,10 +43,12 @@ export default async function SettingsPage() {
         </p>
       </div>
 
-      <SettingsForm 
-        settings={maskedSettings} 
+      <SettingsForm
+        settings={maskedSettings}
         defaultSystemPrompt={defaultSystemPrompt}
       />
+
+      <SectorsCard />
     </div>
   );
 }

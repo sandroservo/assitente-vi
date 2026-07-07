@@ -63,6 +63,8 @@ interface Lead {
 interface ChatPageClientProps {
   conversationId: string;
   convStatus?: string; // open | closed
+  sectorId?: string | null;
+  assignedUserId?: string | null;
   lead: Lead;
   initialMessages: Array<{
     id: string;
@@ -132,6 +134,8 @@ function getStatusBadge(status: string, ownerType: string) {
 export default function ChatPageClient({
   conversationId,
   convStatus = "open",
+  sectorId: initialSectorId = null,
+  assignedUserId: initialAssignedUserId = null,
   lead: initialLead,
   initialMessages,
 }: ChatPageClientProps) {
@@ -142,6 +146,26 @@ export default function ChatPageClient({
   const [parouResponderLoading, setParouResponderLoading] = useState(false);
   const [closed, setClosed] = useState(convStatus === "closed");
   const [closingLoading, setClosingLoading] = useState(false);
+  // Atribuição: setor + atendente.
+  const [sectorId, setSectorId] = useState<string>(initialSectorId ?? "");
+  const [assignedUserId, setAssignedUserId] = useState<string>(initialAssignedUserId ?? "");
+  const [sectors, setSectors] = useState<Array<{ id: string; name: string }>>([]);
+  const [attendants, setAttendants] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    fetch("/api/sectors").then((r) => r.json()).then((d) => setSectors(d.sectors ?? [])).catch(() => {});
+    fetch("/api/users").then((r) => r.json()).then((d) => setAttendants(d.users ?? [])).catch(() => {});
+  }, []);
+
+  const patchAssignment = useCallback(async (payload: { sectorId?: string | null; assignedUserId?: string | null }) => {
+    try {
+      await fetch(`/api/conversations/${conversationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch { /* próximo fetch reconcilia */ }
+  }, [conversationId]);
 
   const handleToggleClose = async () => {
     const next = !closed;
@@ -497,6 +521,30 @@ export default function ChatPageClient({
             </button>
           </div>
         </header>
+
+        {/* Barra de atribuição: setor + atendente */}
+        <div className="bg-white border-b px-3 md:px-6 py-1.5 flex items-center gap-2 flex-shrink-0 text-xs">
+          <span className="text-gray-400 hidden sm:inline">Fila:</span>
+          <select
+            value={sectorId}
+            onChange={(e) => { const v = e.target.value; setSectorId(v); patchAssignment({ sectorId: v || null }); }}
+            className="px-2 py-1 border border-gray-200 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
+            aria-label="Setor"
+          >
+            <option value="">Sem setor</option>
+            {sectors.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+          </select>
+          <span className="text-gray-400 hidden sm:inline">Atendente:</span>
+          <select
+            value={assignedUserId}
+            onChange={(e) => { const v = e.target.value; setAssignedUserId(v); patchAssignment({ assignedUserId: v || null }); }}
+            className="px-2 py-1 border border-gray-200 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
+            aria-label="Atendente"
+          >
+            <option value="">Não atribuído</option>
+            {attendants.map((u) => (<option key={u.id} value={u.id}>{u.name}</option>))}
+          </select>
+        </div>
 
         {/* Tabs */}
         <div className="bg-white flex-shrink-0">
