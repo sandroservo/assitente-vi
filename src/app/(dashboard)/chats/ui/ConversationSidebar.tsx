@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Bot, UserCheck, MessageSquare, X, MessageCircle, Pin, PinOff } from "lucide-react";
+import { Search, Bot, UserCheck, MessageSquare, X, MessageCircle, Pin, PinOff, Bell, BellOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LeadAvatar } from "@/components/LeadAvatar";
 
@@ -116,6 +116,7 @@ function getMessagePreview(conv: Conversation): string {
  */
 function playNotificationSound() {
   try {
+    if (localStorage.getItem("vi_sound_muted") === "1") return;
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -143,6 +144,7 @@ export default function ConversationSidebar({
   const [tab, setTab] = useState<FilterTab>("abertas");
   const [sectorFilter, setSectorFilter] = useState<string>("todos"); // todos | <sectorId>
   const [onlyMine, setOnlyMine] = useState(false);
+  const [muted, setMuted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const prevUnreadMapRef = useRef<Map<string, number>>(new Map());
@@ -160,6 +162,7 @@ export default function ConversationSidebar({
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
+    setMuted(localStorage.getItem("vi_sound_muted") === "1");
     // Inicializa mapa de unreads com dados iniciais
     const map = new Map<string, number>();
     initialConversations.forEach((c) => map.set(c.id, c.unreadCount));
@@ -329,9 +332,23 @@ export default function ConversationSidebar({
       <div className="px-4 pt-12 md:pt-3 py-3 border-b bg-gray-50/80">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-800">Conversas</h2>
-          <span className="text-xs text-gray-500">
-            {conversations.length} conversa{conversations.length !== 1 ? "s" : ""}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">
+              {conversations.length} conversa{conversations.length !== 1 ? "s" : ""}
+            </span>
+            <button
+              onClick={() => {
+                const next = !muted;
+                setMuted(next);
+                localStorage.setItem("vi_sound_muted", next ? "1" : "0");
+              }}
+              className="p-1 rounded hover:bg-gray-200 text-gray-400"
+              title={muted ? "Ativar som de notificação" : "Silenciar som de notificação"}
+              aria-label={muted ? "Ativar som" : "Silenciar som"}
+            >
+              {muted ? <BellOff className="h-4 w-4 text-gray-500" /> : <Bell className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
         {/* Search */}
         <div className="relative">
