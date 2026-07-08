@@ -363,7 +363,7 @@ export default function ConversationSidebar({
           />
         </div>
         {/* Filtros */}
-        <div className="flex gap-1.5 mt-2 overflow-x-auto">
+        <div className="flex flex-wrap gap-1.5 mt-2">
           {TABS.map((t) => (
             <button
               key={t.key}
