@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import ChatPageClient from "./ui/ChatPageClient";
 
@@ -17,6 +18,7 @@ export default async function ChatDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await auth();
 
   const convo = await prisma.conversation.findUnique({
     where: { id },
@@ -80,6 +82,7 @@ export default async function ChatDetailPage({
       convStatus={(convo as { status?: string }).status ?? "open"}
       sectorId={(convo as { sectorId?: string | null }).sectorId ?? null}
       assignedUserId={(convo as { assignedUserId?: string | null }).assignedUserId ?? null}
+      currentUserId={session?.user?.id ?? null}
       lead={lead}
       initialMessages={messages}
     />

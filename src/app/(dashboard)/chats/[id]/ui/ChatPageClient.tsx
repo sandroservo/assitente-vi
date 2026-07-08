@@ -65,6 +65,7 @@ interface ChatPageClientProps {
   convStatus?: string; // open | closed
   sectorId?: string | null;
   assignedUserId?: string | null;
+  currentUserId?: string | null;
   lead: Lead;
   initialMessages: Array<{
     id: string;
@@ -136,6 +137,7 @@ export default function ChatPageClient({
   convStatus = "open",
   sectorId: initialSectorId = null,
   assignedUserId: initialAssignedUserId = null,
+  currentUserId = null,
   lead: initialLead,
   initialMessages,
 }: ChatPageClientProps) {
@@ -545,6 +547,21 @@ export default function ChatPageClient({
             {attendants.map((u) => (<option key={u.id} value={u.id}>{u.name}</option>))}
           </select>
         </div>
+
+        {/* Aviso de atendimento: evita dois atendentes na mesma conversa.
+            ponytail: reflete estado no load + ações próprias; cross-claim ao vivo fica p/ reload. */}
+        {assignedUserId && (
+          assignedUserId === currentUserId ? (
+            <div className="bg-emerald-50 border-b border-emerald-100 px-3 md:px-6 py-1.5 text-xs text-emerald-700 flex items-center gap-1.5">
+              <UserCheck className="h-3.5 w-3.5" /> Você está atendendo este cliente
+            </div>
+          ) : (
+            <div className="bg-amber-50 border-b border-amber-200 px-3 md:px-6 py-1.5 text-xs text-amber-800 flex items-center gap-1.5 font-medium">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Em atendimento por {attendants.find((u) => u.id === assignedUserId)?.name || "outro atendente"} — evite responder junto
+            </div>
+          )
+        )}
 
         {/* Tabs */}
         <div className="bg-white flex-shrink-0">

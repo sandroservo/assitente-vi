@@ -89,9 +89,11 @@ export async function POST(req: Request) {
       },
     });
 
+    // Auto-reivindica: quem responde primeiro vira o atendente (evita conflito).
+    const claim = !convo.assignedUserId && sentByUserId ? { assignedUserId: sentByUserId } : {};
     await prisma.conversation.update({
       where: { id: conversationId },
-      data: { lastMessageAt: new Date() },
+      data: { lastMessageAt: new Date(), ...claim },
     });
 
     await prisma.lead.update({
