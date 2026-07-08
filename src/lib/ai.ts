@@ -10,7 +10,7 @@ import { prisma } from "./prisma";
 import { getSystemSettings } from "./settings";
 import { getAllKnowledge, searchKnowledge, formatKnowledgeForAI } from "./knowledge";
 import { getAllMemories, formatMemoriesForAI, extractAndSaveMemories } from "./memory";
-import { listarClientesVencidos, hasCobrancaToken } from "./amovidas-api";
+import { listarClientesVencidos, hasCobrancaToken, buscarDevedorPorTelefone } from "./amovidas-api";
 
 async function getOpenAIClient() {
   const settings = await getSystemSettings();
@@ -181,6 +181,32 @@ export async function generateAIResponse(
         toolInformation = toolInformation
           ? `${toolInformation}\n\n${cobrancaBlock}`
           : cobrancaBlock;
+      }
+    }
+
+    // Modo Hermes (cobrança): se quem fala é cliente devedor, a Vi vira o agente
+    // de cobrança humano — lembra da dívida, avisa bloqueio/perda de benefícios,
+    // oferece o link, e transfere p/ humano em negociação/parcelamento.
+    if (hasCobrancaToken() && context.leadPhone) {
+      const dev = await buscarDevedorPorTelefone(context.leadPhone);
+      if (dev.found && (dev.debtTotal ?? 0) > 0) {
+        const valor = `R$ ${(dev.debtTotal ?? 0).toFixed(2).replace(".", ",")}`;
+        const hermesBlock = [
+          "<Tool Information>",
+          "## MODO HERMES — COBRANÇA (este contato é um CLIENTE com dívida em aberto)",
+          `Nome: ${dev.name} · Plano: ${dev.planTitle || "AMO VIDAS"}`,
+          `Dívida total em aberto: ${valor} (${dev.chargesCount ?? 1} parcela(s), ${dev.daysOverdue ?? 0} dias, situação: ${dev.situation})`,
+          dev.lastPaymentLink ? `Link de pagamento já gerado (com tudo somado): ${dev.lastPaymentLink}` : "Ainda não há link gerado — ofereça gerar e, se ele aceitar, avise que já envia.",
+          "",
+          "COMO AGIR (seja o Hermes, humano e respeitoso):",
+          "- Reconheça a pessoa pelo nome e trate com empatia; nada de robótico.",
+          "- Se ela perguntar valor/2ª via/PIX/vencimento, responda com os dados acima e ofereça o link.",
+          `- Se a situação for 'bloqueado' ou 'inadimplente', avise com franqueza que o acesso pode ser/está suspenso e que ela perde os benefícios (telemedicina, descontos, rede credenciada), inclusive para dependentes.`,
+          "- Se ela quiser PARCELAR, NEGOCIAR, reclamar, contestar a dívida ou disser que não deve: NÃO negocie sozinho — diga que vai chamar um atendente e encerre pedindo um instante (isso dispara transferência para humano).",
+          "- Nunca invente valores/prazos além dos acima. Não prometa desconto.",
+          "</Tool Information>",
+        ].join("\n");
+        toolInformation = toolInformation ? `${toolInformation}\n\n${hermesBlock}` : hermesBlock;
       }
     }
 
@@ -523,6 +549,19 @@ export function shouldTransferToHuman(text: string): boolean {
     "gerente",
     "reclamação",
     "cancelar",
+    // cobrança/negociação → atendente humano
+    "parcelar",
+    "parcelamento",
+    "negociar",
+    "negociação",
+    "acordo",
+    "desconto",
+    "não devo",
+    "nao devo",
+    "não reconheço",
+    "nao reconheco",
+    "já paguei",
+    "ja paguei",
   ];
   return keywords.some((k) => t.includes(k));
 }

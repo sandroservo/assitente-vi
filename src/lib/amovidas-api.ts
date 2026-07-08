@@ -20,6 +20,30 @@ export function hasCobrancaToken(): boolean {
   return !!TOKEN;
 }
 
+export interface DevedorInfo {
+  found: boolean;
+  userId?: number;
+  name?: string;
+  debtTotal?: number;
+  chargesCount?: number;
+  situation?: string;
+  daysOverdue?: number;
+  planTitle?: string | null;
+  lastPaymentLink?: string | null;
+}
+
+/** Verifica se o telefone é de um cliente devedor (agente Hermes). */
+export async function buscarDevedorPorTelefone(phone: string): Promise<DevedorInfo> {
+  if (!TOKEN || !phone) return { found: false };
+  try {
+    const res = await fetch(`${BASE}/api/agent/cobranca/by-phone?phone=${encodeURIComponent(phone)}`, { headers: headers() });
+    if (!res.ok) return { found: false };
+    return (await res.json()) as DevedorInfo;
+  } catch {
+    return { found: false };
+  }
+}
+
 export interface ClienteVencido {
   customerName: string;
   value: number;
