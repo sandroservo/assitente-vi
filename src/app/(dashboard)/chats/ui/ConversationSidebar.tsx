@@ -362,18 +362,25 @@ export default function ConversationSidebar({
             aria-label="Buscar conversa por nome ou telefone"
           />
         </div>
-        {/* Filtros */}
-        <div className="flex flex-wrap gap-1.5 mt-2">
+        {/* Filtros — uma linha, chips compactos */}
+        <div className="flex gap-1 mt-2">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                "px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                "px-2 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors flex items-center gap-1",
                 tab === t.key ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               )}
+              title={t.count > 0 ? `${t.label}: ${t.count}` : t.label}
             >
-              {t.label}{t.count > 0 ? ` ${t.count}` : ""}
+              <span>{t.label}</span>
+              {t.count > 0 && (
+                <span className={cn(
+                  "text-[9px] font-bold rounded-full px-1 min-w-[15px] text-center",
+                  tab === t.key ? "bg-white/25" : "bg-gray-300/60 text-gray-700"
+                )}>{t.count > 99 ? "99+" : t.count}</span>
+              )}
             </button>
           ))}
         </div>
