@@ -193,12 +193,12 @@ export async function generateAIResponse(
         const valor = `R$ ${(dev.debtTotal ?? 0).toFixed(2).replace(".", ",")}`;
         const hermesBlock = [
           "<Tool Information>",
-          "## MODO HERMES — COBRANÇA (este contato é um CLIENTE com dívida em aberto)",
+          "## MODO COBRANÇA (este contato é um CLIENTE com dívida em aberto — você continua sendo a Vi)",
           `Nome: ${dev.name} · Plano: ${dev.planTitle || "AMO VIDAS"}`,
           `Dívida total em aberto: ${valor} (${dev.chargesCount ?? 1} parcela(s), ${dev.daysOverdue ?? 0} dias, situação: ${dev.situation})`,
           dev.lastPaymentLink ? `Link de pagamento já gerado (com tudo somado): ${dev.lastPaymentLink}` : "Ainda não há link gerado — ofereça gerar e, se ele aceitar, avise que já envia.",
           "",
-          "COMO AGIR (seja o Hermes, humano e respeitoso):",
+          "COMO AGIR (como a Vi, humana e respeitosa):",
           "- Reconheça a pessoa pelo nome e trate com empatia; nada de robótico.",
           "- Se ela perguntar valor/2ª via/PIX/vencimento, responda com os dados acima e ofereça o link.",
           `- Se a situação for 'bloqueado' ou 'inadimplente', avise com franqueza que o acesso pode ser/está suspenso e que ela perde os benefícios (telemedicina, descontos, rede credenciada), inclusive para dependentes.`,
