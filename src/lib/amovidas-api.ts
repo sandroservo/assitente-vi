@@ -187,18 +187,22 @@ export async function enviarCobranca(payload: {
       headers: headers(),
       body: JSON.stringify(body),
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      return {
-        ok: false,
-        error:
-          (data as { error?: string }).error ||
-          (data as { message?: string }).message ||
-          `HTTP ${res.status}`,
-      };
+    const raw = await res.text();
+    let data: Record<string, unknown> = {};
+    try { data = JSON.parse(raw); } catch { /* resposta não-JSON */ }
+    // sistema usa success/message; mapeamos p/ ok/error/message.
+    const okFlag = res.ok && (data.ok === true || data.success === true || data.success === undefined);
+    if (!okFlag) {
+      const err =
+        (data.error as string) ||
+        (data.message as string) ||
+        (raw ? raw.slice(0, 200) : `HTTP ${res.status}`);
+      console.error("[enviarCobranca] falha:", res.status, err);
+      return { ok: false, error: err };
     }
-    return { ok: true, message: (data as { message?: string }).message };
+    return { ok: true, message: (data.message as string) };
   } catch (e) {
+    console.error("[enviarCobranca] exceção:", e);
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
